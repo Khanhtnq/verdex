@@ -9,6 +9,7 @@ import { WalletProvider } from './components/wallet/WalletProvider'
 import App from './App'
 import { loadLogoPack } from './lib/logos'
 import { registerServiceWorker } from './lib/pwa'
+import { refreshPush } from './lib/push'
 import './index.css'
 
 // The hosted preview runs from a sub-path, so it uses hash routing; production uses clean URLs.
@@ -36,3 +37,4 @@ const render = () =>
 if (import.meta.env.VITE_LOGO_PACK === '1') loadLogoPack().finally(render)
 else render()
 registerServiceWorker()
+void refreshPush().catch(() => {})

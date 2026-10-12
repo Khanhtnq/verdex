@@ -51,6 +51,16 @@ export const EARLY_FEATURES: EarlyFeature[] = [
   { path: '/watchlist', label: 'Watchlist', opensAt: '2026-10-16T15:00:00Z' },
   { path: '/index/auto-invest', label: 'Auto-Invest into any index', opensAt: '2026-10-16T23:00:00Z' },
   { path: '/league', label: 'Index league', opensAt: '2026-10-17T15:00:00Z' },
+  { path: '/lend/term', label: 'Term loans', opensAt: '2026-10-17T23:00:00Z' },
+  { path: '/lend/term/long', label: 'Term loans up to a year', opensAt: '2026-10-18T15:00:00Z' },
+  { path: '/lend/term/verdex', label: 'VERDEX as collateral', opensAt: '2026-10-18T23:00:00Z' },
+  { path: '/notifications', label: 'Notifications', opensAt: '2026-10-19T15:00:00Z' },
+  { path: '/app', label: 'The Verdex app', opensAt: '2026-10-19T23:00:00Z' },
+  { path: '/options', label: 'Stock options: calls', opensAt: '2026-10-20T15:00:00Z' },
+  { path: '/options/puts', label: 'Stock options: puts', opensAt: '2026-10-20T23:00:00Z' },
+  { path: '/arbitrum', label: 'Verdex on Arbitrum', opensAt: '2026-10-21T15:00:00Z' },
+  { path: '/arbitrum/contracts', label: 'Verdex contracts on Arbitrum', opensAt: '2026-10-21T23:00:00Z' },
+  { path: '/earn/idle', label: 'Yield on idle USDG', opensAt: '2026-10-22T15:00:00Z' },
 ]
 
 const client = () => createPublicClient({ transport: http(RPC, { retryCount: 3, retryDelay: 1200, timeout: 20_000 }) })

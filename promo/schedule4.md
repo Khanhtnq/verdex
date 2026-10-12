@@ -1,4 +1,4 @@
-# Phase 4 schedule: Oct 12 (evening) to Oct 17, 2026 (CEST, UTC in brackets)
+# Phase 4 schedule: Oct 13 (01:00) to Oct 17, 2026 (CEST, UTC in brackets)
 
 Two boxes a day at 17:00 and 01:00 CEST; a video on every tweet; fillers every 1h45 to 2h30 with odd minutes. No partnership claims; "unaudited" wherever a contract is involved; no yields or prices promised, and nothing about the token's price. Holders at 0.5% of the supply get every box early, as always.
 
@@ -19,21 +19,11 @@ Phase 4, ten boxes, five days:
 
 Clips are `promo/clip-<name>.mp4` (rendered from `promo/clips22.html?clip=<name>`).
 
-## Monday Oct 12
+## Tuesday Oct 13 (first tweet 1h49 after the last one of schedule 3, Oct 12 23:11)
 
-### 20:47 (18:47 UTC) · `clip-p4soon.mp4`
+### 01:00 (23:00 UTC, Oct 12) · `clip-roadmap4.mp4`
 
-> Phase 3 is done. Seven boxes in four days, every contract verified, every page checked this afternoon.
->
-> Phase 4 starts tonight at 01:00 CEST. Ten boxes, five days, two a day.
->
-> This one is less about contracts and more about you: who holds, what moves, what you build, what you share.
->
-> useverdex.xyz
-
-### 23:06 (21:06 UTC) · `clip-roadmap4.mp4`
-
-> Phase 4. Ten boxes, Oct 13 to Oct 17.
+> Phase 4 starts now. Ten boxes, five days, two a day at 17:00 and 01:00 CEST.
 >
 > 1. Holders: every VERDEX wallet, and where you rank.
 > 2. Charts on every stock.
@@ -46,13 +36,11 @@ Clips are `promo/clip-<name>.mp4` (rendered from `promo/clips22.html?clip=<name>
 > 9. Auto-Invest into any index.
 > 10. Index league.
 >
-> First one in two hours.
+> Box 1 is live right now: useverdex.xyz/holders
 
-## Tuesday Oct 13
+### 03:04 (01:04 UTC) · `clip-holderslive.mp4`
 
-### 01:00 (23:00 UTC, Oct 12) · `clip-holderslive.mp4`
-
-> Box 1 of 10: Holders is live.
+> Box 1 of 10: Holders.
 >
 > Every wallet that holds VERDEX, read from the token's full transfer history, with each balance read from the token itself so the list adds up to the supply. How many hold, how many joined today and this week, how it is spread, and the top 100.
 >
@@ -60,19 +48,11 @@ Clips are `promo/clip-<name>.mp4` (rendered from `promo/clips22.html?clip=<name>
 >
 > useverdex.xyz/holders
 
-### 03:04 (01:04 UTC) · `clip-holdershow.mp4`
-
-> How Holders counts.
->
-> The token's transfer history goes back to the mint. Every address that ever received VERDEX is read again for its balance, so a wallet that sold shows zero and the total always equals the supply.
->
-> The Uniswap pool and contracts are listed apart from people. The same data is open at /api/holders.
-
 ### 05:12 (03:12 UTC) · `clip-earlyaccess.mp4`
 
 > 0.5% of the supply opens every box early.
 >
-> 46 wallets have it today. They used Copy a wallet, the Base contracts and Agent rules v2 before anyone else, and they will use every box of phase 4 the same way.
+> About fifty wallets have it right now, and the Holders page counts them live. They used Copy a wallet, the Base contracts and Agent rules v2 before anyone else, and they will use every box of phase 4 the same way.
 >
 > The Holders page tells you how far you are from it.
 
@@ -470,6 +450,6 @@ Clips are `promo/clip-<name>.mp4` (rendered from `promo/clips22.html?clip=<name>
 
 > Phase 5 is being written.
 >
-> Round 1 of the holder vote is still open until Oct 20, and it decides what comes first. If you hold VERDEX, rank it.
+> Round 1 of the holder vote closes tonight at 23:59 CEST, and the order it lands in is the order phase 5 ships in. If you hold VERDEX, rank it now.
 >
 > useverdex.xyz/vote

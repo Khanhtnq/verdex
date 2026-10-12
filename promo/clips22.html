@@ -241,7 +241,77 @@ const std4 = (s, n, a, b, R, cap, { sizeA = 100, sizeB = 96 } = {}) => {
   const c = add(s, `<div class="cap" style="top:790px">${cap}</div>`)
   return (t) => { e(t); runLine(l1, t, 0.3, 2.0); runLine(l2, t, 2.3, 4.2); runFacts(rows, t); capIn(c, t, 9.2) }
 }
+const ep5 = (s, n) => { const el = add(s, `<div class="ep"><i></i><b>Phase 5</b><span>${n ? `${n} of 10` : 'Ranked by holders'}</span></div>`); return (t) => { const p = spring(t - 0.15, 0.8); el.style.opacity = clamp(p); el.style.transform = `translate3d(0, ${(10 * (1 - p)).toFixed(1)}px, 0)` } }
+const std5 = (s, n, a, b, R, cap, { sizeA = 100, sizeB = 96 } = {}) => {
+  const e = ep5(s, n)
+  const l1 = line(s, a, { top: 470, size: sizeA })
+  const l2 = line(s, b, { top: 470, size: sizeB, color: 'var(--lime)' })
+  const rows = facts(s, R)
+  const c = add(s, `<div class="cap" style="top:790px">${cap}</div>`)
+  return (t) => { e(t); runLine(l1, t, 0.3, 2.0); runLine(l2, t, 2.3, 4.2); runFacts(rows, t); capIn(c, t, 9.2) }
+}
 const CLIPS = {
+  // ---- phase 5 ----
+  votedone: (s) => std5(s, 0, 'The vote is in.', 'You ranked phase 5.', [
+    [TL('1'), 'Lend, bigger', 'every stock as collateral, longer terms, VERDEX too', 'first'],
+    [TL('2'), 'The app', 'with notifications for fills, runs and trades', 'second'],
+    [TL('3'), 'Stock options', 'calls and puts, written and settled onchain', 'third'],
+    [TL('4'), 'Arbitrum, then idle USDG', 'in the order you ranked them', 'then'],
+  ], 'Phase 5 starts at 01:00 CEST. useverdex.xyz/vote'),
+  termlive: (s) => std5(s, 1, 'Any stock.', 'Fixed terms.', [
+    [TL('↔'), 'Holder to holder', 'lenders post offers, borrowers post requests', 'p2p'],
+    [TL('%'), 'Fixed interest', 'set up front, for the whole term', 'fixed'],
+    [TL('0'), 'No oracle, no liquidation', 'repay by the end and the collateral comes back', 'terms'],
+    [TL('∞'), 'Every stock', 'any tokenized stock on Robinhood Chain as collateral', 'all'],
+  ], 'Box 1 of 10, live. useverdex.xyz/lend/term'),
+  termhow: (s) => std5(s, 1, 'No liquidation.', 'Just a date.', [
+    [TL('1'), 'Lock the collateral', 'the amount the lender asked for, per USDG', 'lock'],
+    [TL('2'), 'Get the USDG now', 'straight to your wallet, same transaction', 'get'],
+    [TL('3'), 'Repay any time before the end', 'principal plus the fixed interest', 'repay'],
+    [TL('4'), 'Not repaid by then?', 'the lender takes the collateral, nothing else happens', 'end'],
+  ], 'Unaudited. useverdex.xyz/lend/term'),
+  longlive: (s) => std5(s, 2, 'Up to a year.', 'Same terms.', [
+    [TL('90'), '90 days', 'a quarter at one fixed rate', 'q'],
+    [TL('180'), '180 days', 'half a year', 'h'],
+    [TL('365'), '365 days', 'a full year, no recall, no margin call', 'y'],
+    [TL('✓'), 'Same contract', 'already live, already verified', 'same'],
+  ], 'Box 2 of 10, live. useverdex.xyz/lend/term'),
+  verdexcoll: (s) => std5(s, 3, 'VERDEX', 'as collateral.', [
+    [IMG(`${PUB}/favicon-verdex.svg`), 'Borrow against VERDEX', 'USDG now, your VERDEX back when you repay', 'borrow'],
+    [TL('↔'), 'From another holder', 'the lender sets the rate and how much VERDEX per USDG', 'p2p'],
+    [TL('0'), 'No forced sale', 'no oracle, no liquidation before the end', 'safe'],
+    [TL('✓'), 'Keep your bag', 'stay exposed, get liquidity', 'keep'],
+  ], 'Box 3 of 10, live. useverdex.xyz/lend/term'),
+  notiflive: (s) => std5(s, 4, 'It ran.', 'Now you know.', [
+    [TL('◎'), 'Order filled', 'on Robinhood Chain or Base', 'orders'],
+    [TL('↻'), 'Plan ran', 'Auto-Invest into a stock or any index', 'plans'],
+    [TL('⚖'), 'Vault rebalanced, agent traded', 'the moment it happens', 'vaults'],
+    [TL('🔔'), 'Loans and options', 'started, repaid, bought, exercised', 'p2p'],
+  ], 'Box 4 of 10, live. useverdex.xyz/notifications'),
+  applive: (s) => std5(s, 5, 'Verdex,', 'in your pocket.', [
+    [TL('📱'), 'Two taps to install', 'no app store, no account', 'install'],
+    [TL('🔔'), 'Push notifications', 'fills, runs and trades', 'push'],
+    [TL('⚡'), 'Shortcuts', 'Portfolio, Notifications, Term loans, Options', 'fast'],
+    [TL('🔑'), 'Your wallet, your keys', 'Verdex never holds either', 'keys'],
+  ], 'Box 5 of 10, live. useverdex.xyz/app'),
+  callslive: (s) => std5(s, 6, 'Calls.', 'Onchain.', [
+    [TL('✍'), 'Write a covered call', 'lock the stock, name the strike and the premium', 'write'],
+    [TL('$'), 'Premium straight to you', 'the moment someone buys it', 'earn'],
+    [TL('↗'), 'Buy a call', 'pay the strike before expiry, get the stock', 'buy'],
+    [TL('0'), 'No oracle', 'everything is locked from the start, so it always settles', 'settle'],
+  ], 'Box 6 of 10, live. Unaudited. useverdex.xyz/options'),
+  putslive: (s) => std5(s, 7, 'Puts.', 'Onchain.', [
+    [TL('✍'), 'Write a cash-secured put', 'lock the strike in USDG, keep the premium', 'write'],
+    [TL('↘'), 'Buy a put', 'sell the stock at the strike, whatever the price', 'protect'],
+    [TL('↔'), 'Pass it on', 'options can change hands before expiry', 'trade'],
+    [TL('✓'), 'Same contract as calls', 'verified, no owner, no fee', 'same'],
+  ], 'Box 7 of 10, live. Unaudited. useverdex.xyz/options'),
+  idlelive: (s) => std5(s, 10, 'Idle USDG,', 'put to work.', [
+    [TL('1'), 'One tap', 'your idle USDG to the Lend market paying the most', 'tap'],
+    [TL('%'), 'Paid by borrowers', 'the rate moves with how much is borrowed', 'rate'],
+    [TL('↩'), 'Take it back', 'whenever the market has it available', 'out'],
+    [TL('✓'), 'Keep a buffer', 'choose how much stays in the wallet', 'keep'],
+  ], 'Box 10 of 10, live. useverdex.xyz/earn/idle'),
   // ---- phase 4 ----
   p4soon: (s) => std4(s, 0, 'Phase 3, done.', 'Phase 4, tonight.', [
     [TL('7'), 'Phase 3 shipped', 'seven boxes in four days, every contract verified', 'done'],
@@ -262,7 +332,7 @@ const CLIPS = {
     [TL('{ }'), 'Open data', 'the same list at /api/holders', 'API'],
   ], 'useverdex.xyz/holders'),
   earlyaccess: (s) => std4(s, 1, '0.5% of the supply.', 'Every box, first.', [
-    [TL('46'), 'Wallets with early access', 'counted on the Holders page, today', 'now'],
+    [TL('~50'), 'Wallets with early access', 'counted live on the Holders page', 'now'],
     [TL('⏱'), 'Every phase 4 box', 'opens for them before everyone else', 'early'],
     [TL('?'), 'How far are you', 'connect on the Holders page and it tells you', 'check'],
   ], 'useverdex.xyz/holders'),
@@ -529,7 +599,7 @@ const CLIPS = {
     [TL('✓'), 'Everything we built', 'open source and verified', 'ours'],
   ], 'Thank you. useverdex.xyz'),
   next5: (s) => std4(s, 10, 'Phase 5', 'is yours to rank.', [
-    [TL('1'), 'Round 1 is open', 'until October 20', 'vote'],
+    [TL('1'), 'Round 1 is open', 'closes Oct 17, 23:59 CEST', 'vote'],
     [TL('◆'), 'Holders rank it', 'weighted by VERDEX held', 'weight'],
     [TL('→'), 'It decides what comes first', 'in phase 5', 'next'],
   ], 'useverdex.xyz/vote'),

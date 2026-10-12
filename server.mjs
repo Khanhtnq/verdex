@@ -14,6 +14,7 @@ import { VAULTS_ADDRESS as VAULTS_BUILT_IN, BASE_VAULTS_ADDRESS as BASE_VAULTS_B
 import { AGENT_ADDRESS as AGENT_BUILT_IN } from './scripts/agent-address.mjs'
 import { apiRead, isApiPath } from './scripts/api-lib.mjs'
 import { relayClaim } from './scripts/gift-relay.mjs'
+import { pushKey, pushPass, subscribe as pushSubscribe, unsubscribe as pushUnsubscribe, test as pushTest } from './scripts/push-lib.mjs'
 import { INDEX_PLANS_ADDRESS as INDEX_PLANS_BUILT_IN } from './scripts/index-plans-address.mjs'
 
 const ROOT = resolve('dist')
@@ -45,6 +46,14 @@ const server = http.createServer((req, res) => {
     req.on('end', () => { let body; try { body = JSON.parse(raw) } catch { body = null } const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim(); relayClaim(key, ip, body).then((r) => { res.writeHead(r.status, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }); res.end(JSON.stringify(r.body)) }) })
     return
   }
+  const PUSH = { '/api/push/subscribe': pushSubscribe, '/api/push/unsubscribe': pushUnsubscribe, '/api/push/test': pushTest }
+  if (req.method === 'POST' && PUSH[req.url]) {
+    let raw = ''
+    req.on('data', (d) => { raw += d; if (raw.length > 4096) req.destroy() })
+    req.on('end', () => { let body; try { body = JSON.parse(raw) } catch { body = null } Promise.resolve(PUSH[req.url](body)).then((r) => { res.writeHead(r.ok ? 200 : 400, { 'content-type': 'application/json' }); res.end(JSON.stringify(r)) }).catch(() => { res.writeHead(500); res.end() }) })
+    return
+  }
+  if (req.method === 'GET' && req.url === '/api/push/key') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ key: pushKey() })) }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end() }
   let path
   try { path = decodeURIComponent(new URL(req.url, 'http://x').pathname) } catch { res.writeHead(400); return res.end() }
@@ -65,7 +74,7 @@ const server = http.createServer((req, res) => {
   if (extname(path) && !path.endsWith('.html')) { res.writeHead(404, { 'content-type': 'text/plain' }); return res.end('not found') }
   return send(req, res, join(ROOT, 'index.html'))
 })
-server.listen(PORT, () => { console.log(`verdex serving ${ROOT} on :${PORT}`); apiRead('/api/holders').catch(() => {}); if (!process.env.NO_WARM) setTimeout(warmCandles, 20_000) })
+server.listen(PORT, () => { console.log(`verdex serving ${ROOT} on :${PORT}`); apiRead('/api/holders').catch(() => {}); if (!process.env.NO_WARM) setTimeout(warmCandles, 20_000); setInterval(() => pushPass((m) => console.log(`[push] ${m}`)).catch(() => {}), 90_000) })
 // Keep every stock pool's daily candles in the cache, so charts, backtests and the league load at once. The fetches
 // are paced inside the API library; a full round takes a few minutes and runs every twenty-five.
 async function warmCandles() {

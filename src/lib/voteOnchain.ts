@@ -37,6 +37,7 @@ export type Round = {
   id: bigint
   title: string
   options: string[]
+  shipped: string[]
   opensAt: number
   closesAt: number
   open: boolean
@@ -49,13 +50,21 @@ export type Round = {
 }
 const PAGE = 200n
 
+// Options already shipped, taken out of a round's tally (their index in the round), and rounds whose results are
+// read as final earlier than the contract's own close. Round 1 closes on this page on Oct 17, 23:59 CEST.
+export const SHIPPED: Record<string, number[]> = { '1': [4] }
+export const CLOSE_EARLY: Record<string, number> = { '1': Date.parse('2026-10-17T21:59:59Z') / 1000 }
 export async function readRound(id: bigint, me?: Address): Promise<Round> {
   const c = client()
   const [r, open] = await Promise.all([c.readContract({ address: CONTRACT, abi, functionName: 'round', args: [id] }), c.readContract({ address: CONTRACT, abi, functionName: 'isOpen', args: [id] })])
-  const [title, options, opensAt, closesAt, voterCount] = r
+  const [title, options, opensAt, chainClose, voterCount] = r
+  const early = CLOSE_EARLY[String(id)]
+  const closesAt = early && early < chainClose ? early : chainClose
+  const openHere = open && Math.floor(Date.now() / 1000) <= closesAt
+  const shipped = new Set(SHIPPED[String(id)] ?? [])
   const voters: Address[] = []
   for (let off = 0n; off < voterCount; off += PAGE) voters.push(...(await c.readContract({ address: CONTRACT, abi, functionName: 'voters', args: [id, off, PAGE] })))
-  const n = options.length
+  const n = options.length - shipped.size
   const points = options.map(() => 0n), firsts = options.map(() => 0n)
   let weightVoting = 0n
   let mine: number[] | undefined
@@ -71,7 +80,7 @@ export async function readRound(id: bigint, me?: Address): Promise<Round> {
       if (me && v.toLowerCase() === me.toLowerCase()) mine = ranking
       if (w === 0n || !ranking.length) return
       weightVoting += w
-      ranking.forEach((opt, pos) => { if (opt < n) { points[opt] += w * BigInt(n - pos); if (pos === 0) firsts[opt] += w } })
+      ranking.filter((opt) => !shipped.has(opt) && opt < options.length).forEach((opt, pos) => { { points[opt] += w * BigInt(n - pos); if (pos === 0) firsts[opt] += w } })
     })
   }
   const [supply, myBal] = await Promise.all([
@@ -79,10 +88,10 @@ export async function readRound(id: bigint, me?: Address): Promise<Round> {
     me ? c.readContract({ address: VERDEX_TOKEN.address, abi: erc20Abi, functionName: 'balanceOf', args: [me] }).catch(() => 0n) : Promise.resolve(0n),
   ])
   const total = points.reduce((s, p) => s + p, 0n)
-  const candidates: Candidate[] = options.map((label, index) => ({ index, label, points: points[index], firsts: firsts[index], share: total > 0n ? Number((points[index] * 10_000n) / total) / 100 : 0, rank: 0 }))
+  const candidates: Candidate[] = options.map((label, index) => ({ index, label, points: points[index], firsts: firsts[index], share: total > 0n ? Number((points[index] * 10_000n) / total) / 100 : 0, rank: 0 })).filter((x) => !shipped.has(x.index))
   candidates.sort((a, b) => (b.points > a.points ? 1 : b.points < a.points ? -1 : a.index - b.index))
   candidates.forEach((x, i) => (x.rank = i + 1))
-  return { id, title, options: [...options], opensAt: Number(opensAt), closesAt: Number(closesAt), open, voterCount: Number(voterCount), weightVoting, supply, candidates, mine, myWeight: me ? myBal : 0n }
+  return { id, title, options: [...options], shipped: [...shipped].map((i) => options[i]), opensAt: Number(opensAt), closesAt: Number(closesAt), open: openHere, voterCount: Number(voterCount), weightVoting, supply, candidates, mine, myWeight: me ? myBal : 0n }
 }
 export async function readRounds(me?: Address): Promise<Round[]> {
   if (!DEPLOYED) return []

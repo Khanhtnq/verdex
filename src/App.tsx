@@ -45,6 +45,11 @@ const IndexCreatePage = lazy(() => import('./pages/IndexCreatePage'))
 const IndexViewPage = lazy(() => import('./pages/IndexViewPage'))
 const CommunityIndexesPage = lazy(() => import('./pages/CommunityIndexesPage'))
 const GiftPage = lazy(() => import('./pages/GiftPage'))
+const TermPage = lazy(() => import('./pages/TermPage'))
+const OptionsPage = lazy(() => import('./pages/OptionsPage'))
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
+const AppPage = lazy(() => import('./pages/AppPage'))
+const IdlePage = lazy(() => import('./pages/IdlePage'))
 const GiftClaimPage = lazy(() => import('./pages/GiftClaimPage'))
 const SharePage = lazy(() => import('./pages/SharePage'))
 const WatchlistPage = lazy(() => import('./pages/WatchlistPage'))
@@ -116,6 +121,11 @@ const TITLES: [string, string][] = [
   ['/index/create', 'Make your own index'],
   ['/index/community', 'Community indexes'],
   ['/gift', 'Gift a stock'],
+  ['/lend/term', 'Term loans'],
+  ['/options', 'Stock options'],
+  ['/notifications', 'Notifications'],
+  ['/app', 'The Verdex app'],
+  ['/earn/idle', 'Yield on idle USDG'],
   ['/gift/claim', 'A gift for you'],
   ['/share', 'Share cards'],
   ['/watchlist', 'Watchlist'],
@@ -184,6 +194,11 @@ export default function App() {
             <Route path="/index/auto-invest" element={<IndexAutoInvestPage />} />
             <Route path="/index/community" element={<CommunityIndexesPage />} />
             <Route path="/gift" element={<GiftPage />} />
+            <Route path="/lend/term" element={<TermPage />} />
+            <Route path="/options" element={<OptionsPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/app" element={<AppPage />} />
+            <Route path="/earn/idle" element={<IdlePage />} />
             <Route path="/gift/claim" element={<GiftClaimPage />} />
             <Route path="/share" element={<SharePage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />

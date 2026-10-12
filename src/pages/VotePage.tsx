@@ -56,10 +56,11 @@ function Tally({ r }: { r: Round }) {
 
 // A holder's ballot: tap candidates in order of preference; tap again to remove; submit.
 function Ballot({ r, wallet, chain, onDone }: { r: Round; wallet: Ctx; chain: ChainX | undefined; onDone: () => void }) {
-  const [picked, setPicked] = useState<number[]>(r.mine ?? [])
+  const keep = (xs: number[]) => xs.filter((i) => !r.shipped.includes(r.options[i]))
+  const [picked, setPicked] = useState<number[]>(keep(r.mine ?? []))
   const [touched, setTouched] = useState(false)
   const [tx, setTx] = useState<Tx>({ phase: 'idle' })
-  useEffect(() => { if (!touched && r.mine) setPicked(r.mine) }, [r.mine, touched])
+  useEffect(() => { if (!touched && r.mine) setPicked(keep(r.mine)) }, [r.mine, touched]) // eslint-disable-line react-hooks/exhaustive-deps
   const busy = tx.phase !== 'idle' && tx.phase !== 'done' && tx.phase !== 'failed'
   const toggle = (i: number) => { setTouched(true); setPicked((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i])) }
   const same = r.mine && r.mine.length === picked.length && r.mine.every((x, k) => x === picked[k])
@@ -73,6 +74,7 @@ function Ballot({ r, wallet, chain, onDone }: { r: Round; wallet: Ctx; chain: Ch
       <Typography sx={{ ...t.type.overline, color: t.color.textLabel, mb: 1.25 }}>Your ranking{r.mine?.length ? ' (on the chain)' : ''}</Typography>
       <Box sx={{ display: 'grid', gap: 0.75 }}>
         {r.options.map((label, i) => {
+          if (r.shipped.includes(label)) return null
           const pos = picked.indexOf(i)
           return (
             <Box key={i} component="button" type="button" onClick={() => toggle(i)} disabled={!r.open || busy} aria-pressed={pos >= 0} sx={{ all: 'unset', cursor: r.open ? 'pointer' : 'default', display: 'grid', gridTemplateColumns: '36px minmax(0,1fr)', alignItems: 'center', gap: 1.5, p: 1.25, borderRadius: t.radius.input, background: pos >= 0 ? t.color.text : t.color.raised, color: pos >= 0 ? t.color.page : t.color.text, fontSize: 13, '&:hover': { background: pos >= 0 ? t.color.text : t.color.hover } }}>
@@ -112,6 +114,7 @@ function RoundCard({ r, wallet, chain, onDone }: { r: Round; wallet: Ctx; chain:
         <Box>
           <Typography sx={{ ...t.type.overline, color: t.color.textLabel, mb: 1.25 }}>{r.open ? 'Live tally' : 'Result'}</Typography>
           {r.voterCount === 0 ? <Typography sx={{ fontSize: 13, color: t.color.textMuted }}>No ranking yet. The first one decides the order until the next.</Typography> : <Tally r={r} />}
+          {r.shipped.length > 0 && <Box sx={{ mt: 2, p: 1.5, borderRadius: t.radius.input, background: t.color.raised }}><Typography sx={{ fontSize: 12, color: t.color.textLabel }}>Already shipped, taken out of the tally</Typography>{r.shipped.map((x) => <Typography key={x} sx={{ fontSize: 13, mt: 0.5, display: 'flex', gap: 1, alignItems: 'center' }}><CheckIcon size={13} /> {x}</Typography>)}</Box>}
         </Box>
         <Ballot r={r} wallet={wallet} chain={chain} onDone={onDone} />
       </Box>
