@@ -202,11 +202,99 @@ export async function numbers() {
   }
 }
 
+// ---- VERDEX holders: every address that ever received VERDEX, from the token's Transfer events since the mint,
+// with each one's balance read from the token itself (so the sum is the supply, whatever the logs missed). The scan
+// is kept in memory and only new blocks are read after the first call.
+const VERDEX = '0x96f455a90a80dcf0c2df6703ea4ba3bedf286e43'
+const VERDEX_MINT_BLOCK = 74_800_000n
+const POOL_MANAGER = '0x8366a39CC670B4001A1121B8F6A443A643e40951'
+const transferEv = parseAbiItem('event Transfer(address indexed from,address indexed to,uint256 value)')
+const scanState = { to: VERDEX_MINT_BLOCK - 1n, firstSeen: new Map(), transfers: [] }
+async function scanSplit(c, a, b) {
+  try { return await c.getLogs({ address: VERDEX, event: transferEv, fromBlock: a, toBlock: b }) }
+  catch (e) { if (b - a < 2000n) throw e; const m = (a + b) / 2n; return [...(await scanSplit(c, a, m)), ...(await scanSplit(c, m + 1n, b))] }
+}
+let scanning = null
+async function scanVerdex(c) {
+  if (scanning) return scanning
+  scanning = (async () => {
+    const head = await c.getBlockNumber()
+    for (let a = scanState.to + 1n; a <= head; a += 5_000_000n) {
+      const b = a + 4_999_999n > head ? head : a + 4_999_999n
+      const got = await scanSplit(c, a, b)
+      for (const l of got) {
+        const to = l.args.to
+        if (to !== '0x0000000000000000000000000000000000000000' && !scanState.firstSeen.has(lc(to))) scanState.firstSeen.set(lc(to), { address: to, block: l.blockNumber })
+        scanState.transfers.push(l.blockNumber)
+      }
+      scanState.to = b
+    }
+    return head
+  })().finally(() => { scanning = null })
+  return scanning
+}
+export async function holders() {
+  const ch = CHAINS.robinhood
+  const c = clientFor(ch)
+  const head = await scanVerdex(c)
+  const list = [...scanState.firstSeen.values()]
+  const bals = await c.multicall({ multicallAddress: MULTICALL3, batchSize: 8192, contracts: list.map((x) => ({ address: VERDEX, abi: erc20Abi, functionName: 'balanceOf', args: [x.address] })) })
+  const headBlock = await c.getBlock({ blockNumber: head })
+  const back = await c.getBlock({ blockNumber: head - 1_000_000n })
+  const secPerBlock = Number(headBlock.timestamp - back.timestamp) / 1_000_000
+  const when = (block) => Number(headBlock.timestamp) - Number(head - block) * secPerBlock
+  const SUPPLY = 1_000_000_000
+  const rows = list.map((x, i) => ({ address: x.address, verdex: bals[i].status === 'success' ? num(bals[i].result, 18) : 0, since: Math.round(when(x.block)) })).filter((x) => x.verdex > 0)
+  const codes = await Promise.all(rows.map((r) => (r.verdex >= SUPPLY * 0.001 ? c.getCode({ address: r.address }).catch(() => '0x') : Promise.resolve('0x'))))
+  for (let i = 0; i < rows.length; i++) {
+    const code = codes[i] ?? '0x'
+    rows[i].kind = lc(rows[i].address) === lc(POOL_MANAGER) ? 'pool' : code.length > 2 && !code.startsWith('0xef0100') ? 'contract' : 'wallet'
+  }
+  rows.sort((a, b) => b.verdex - a.verdex)
+  const people = rows.filter((r) => r.kind === 'wallet')
+  const now = Number(headBlock.timestamp)
+  const share = (v) => (v / SUPPLY) * 100
+  const bucket = (lo, hi) => people.filter((r) => share(r.verdex) >= lo && share(r.verdex) < hi).length
+  // Holders over time: wallets that hold today, counted from the day they first received VERDEX.
+  const days = []
+  const start = Math.min(...people.map((r) => r.since))
+  for (let d = Math.floor(start / 86400) * 86400; d <= now; d += 86400) days.push({ day: d, holders: people.filter((r) => r.since < d + 86400).length })
+  return {
+    chain: ch.name, token: VERDEX, supply: SUPPLY, readAt: new Date(now * 1000).toISOString(),
+    holders: people.length, contracts: rows.length - people.length,
+    inPool: share(rows.find((r) => r.kind === 'pool')?.verdex ?? 0),
+    earlyAccessBps: 50, earlyAccess: people.filter((r) => share(r.verdex) >= 0.5).length,
+    newHolders: { day: people.filter((r) => r.since >= now - 86400).length, week: people.filter((r) => r.since >= now - 7 * 86400).length },
+    transfers: { day: scanState.transfers.filter((b) => when(b) >= now - 86400).length, total: scanState.transfers.length },
+    buckets: [{ label: '1% or more', count: bucket(1, 101) }, { label: '0.5% to 1%', count: bucket(0.5, 1) }, { label: '0.1% to 0.5%', count: bucket(0.1, 0.5) }, { label: '0.01% to 0.1%', count: bucket(0.01, 0.1) }, { label: 'Under 0.01%', count: bucket(0, 0.01) }],
+    top10Share: people.slice(0, 10).reduce((s, r) => s + share(r.verdex), 0),
+    series: days,
+    list: rows.map((r) => ({ address: r.address, verdex: Math.round(r.verdex * 100) / 100, share: Math.round(share(r.verdex) * 10000) / 10000, kind: r.kind, since: r.since })),
+  }
+}
+
+// ---- Candles: daily OHLCV of one pool from GeckoTerminal's public API, kept for thirty minutes per pool so the
+// site's charts and backtests never hit its rate limit. [unix, open, high, low, close, volumeUsd], oldest first.
+const GT_NETWORK = { robinhood: 'robinhood', base: 'base' }
+// One call to GeckoTerminal at a time, a little over two seconds apart, to stay under its public limit.
+let gtChain = Promise.resolve()
+const gtFetch = (url) => { const run = gtChain.then(async () => { let r = await fetch(url, { headers: { accept: 'application/json' } }); if (r.status === 429) { await new Promise((ok) => setTimeout(ok, 61_000)); r = await fetch(url, { headers: { accept: 'application/json' } }) } await new Promise((ok) => setTimeout(ok, 2600)); return r }); gtChain = run.catch(() => {}); return run }
+export async function candles(chainKey, pool) {
+  const r = await gtFetch(`https://api.geckoterminal.com/api/v2/networks/${GT_NETWORK[chainKey]}/pools/${pool}/ohlcv/day?limit=180&currency=usd`)
+  if (!r.ok) throw new Error(`candles ${r.status}`)
+  const j = await r.json()
+  const list = (j?.data?.attributes?.ohlcv_list ?? []).map((x) => x.map(Number)).sort((a, b) => a[0] - b[0])
+  return { chain: chainKey, pool, interval: 'day', candles: list }
+}
+const CANDLES = /^\/api\/candles\/(robinhood|base)\/(0x[0-9a-fA-F]{40})$/
+const TTL_OF = (path) => (CANDLES.test(path) ? 30 * 60_000 : path === '/api/holders' ? 60_000 : 60_000)
+const readerFor = (path) => { if (READERS[path]) return READERS[path]; const m = path.match(CANDLES); return m ? () => candles(m[1], m[2]) : null }
+
 // ---- the routes, with a sixty-second cache and one in-flight read per key ----
 const TTL = 60_000
 const cache = new Map()
 const READERS = {
-  '/api': async () => ({ name: 'Verdex API', docs: 'https://useverdex.xyz/docs#api', cache: 'sixty seconds', endpoints: ['/api/numbers', '/api/indexes', '/api/indexes/base', '/api/without-you', '/api/treasury', '/api/volume', '/api/pools', '/api/pools/base', '/api/assets'] }),
+  '/api': async () => ({ name: 'Verdex API', docs: 'https://useverdex.xyz/docs#api', cache: 'sixty seconds', endpoints: ['/api/numbers', '/api/indexes', '/api/indexes/base', '/api/without-you', '/api/treasury', '/api/volume', '/api/pools', '/api/pools/base', '/api/assets', '/api/holders', '/api/candles/{robinhood|base}/{pool}'] }),
   '/api/numbers': numbers,
   '/api/indexes': () => Promise.all([indexes('robinhood'), indexes('base')]).then(([a, b]) => [...a, ...b]),
   '/api/indexes/base': () => indexes('base'),
@@ -216,14 +304,15 @@ const READERS = {
   '/api/pools': () => pools('robinhood'),
   '/api/pools/base': () => pools('base'),
   '/api/assets': async () => assets(),
+  '/api/holders': holders,
 }
-export function isApiPath(path) { return Object.prototype.hasOwnProperty.call(READERS, path) }
+export function isApiPath(path) { return Object.prototype.hasOwnProperty.call(READERS, path) || CANDLES.test(path) }
 export async function apiRead(path) {
   const hit = cache.get(path)
   const now = Date.now()
-  if (hit && now - hit.at < TTL) return { status: 200, body: hit.body, age: Math.round((now - hit.at) / 1000) }
+  if (hit && now - hit.at < TTL_OF(path)) return { status: 200, body: hit.body, age: Math.round((now - hit.at) / 1000) }
   if (hit?.inflight) return hit.inflight
-  const inflight = READERS[path]().then((v) => { const body = JSON.stringify({ ok: true, readAt: new Date().toISOString(), data: json(v) }); cache.set(path, { at: Date.now(), body }); return { status: 200, body, age: 0 } }).catch((e) => { cache.delete(path); return { status: 502, body: JSON.stringify({ ok: false, error: String(e?.shortMessage ?? e?.message ?? e).slice(0, 200) }), age: 0 } })
+  const inflight = readerFor(path)().then((v) => { const body = JSON.stringify({ ok: true, readAt: new Date().toISOString(), data: json(v) }); cache.set(path, { at: Date.now(), body }); return { status: 200, body, age: 0 } }).catch((e) => { if (hit?.body) { cache.set(path, { at: Date.now() - TTL_OF(path) + 300_000, body: hit.body }); return { status: 200, body: hit.body, age: Math.round((Date.now() - hit.at) / 1000) } } cache.delete(path); return { status: 502, body: JSON.stringify({ ok: false, error: String(e?.shortMessage ?? e?.message ?? e).slice(0, 200) }), age: 0 } })
   cache.set(path, { ...(hit ?? {}), inflight })
   return inflight
 }

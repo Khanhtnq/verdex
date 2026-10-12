@@ -138,8 +138,9 @@ const SUB = Q.get('sub') ?? 'Index, Fees buy VERDEX, Lend, Leverage. Shipped, ve
 const NEXT = Q.get('next') ?? 'Next: Verdex on Base.'
 const TAG = Q.get('tag') ?? '36 hours in'
 const PHASE = Q.get('phase') ?? '2'
+const B4 = ['Holders', 'Charts', 'Backtest any basket', 'Make your own index', 'Community indexes and Base', 'Gift a stock', 'Share cards', 'Watchlist and alerts', 'Auto-Invest into any index', 'Index league']
 const B3 = ['Copy a wallet', 'Verdex API', 'Lend v3 and Leverage v2', 'Orders without you on Base', 'Auto-Invest without you on Base', 'Vaults without you on Base', 'Agent rules v2']
-const TITLE = Q.get('title') ?? `${WORDS[N]} of ${PHASE === '3' ? 'seven' : 'eleven'}. Checked.`
+const TITLE = Q.get('title') ?? `${WORDS[N]} of ${PHASE === '3' ? 'seven' : PHASE === '4' ? 'ten' : 'eleven'}. Checked.`
 function spring(t, response = 0.5, damping = 1) { if (t <= 0) return 0; const w = (2 * Math.PI) / response; if (damping >= 1) return 1 - (1 + w * t) * Math.exp(-w * t); const wd = w * Math.sqrt(1 - damping * damping); return 1 - Math.exp(-damping * w * t) * (Math.cos(wd * t) + ((damping * w) / wd) * Math.sin(wd * t)) }
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v))
 const $ = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild }
@@ -152,7 +153,7 @@ function build() {
   const glow = add(stage, `<div class="abs" style="left:50%;top:50%;width:1400px;height:900px;margin:-450px 0 0 -700px;background:radial-gradient(closest-side,rgba(194,234,138,.13),rgba(194,234,138,0));pointer-events:none"></div>`)
   const ep = add(stage, `<div class="ep" style="position:absolute;left:80px;top:80px;display:inline-flex;align-items:center;gap:14px;padding:12px 20px;border-radius:12px;background:var(--chip);font-size:22px;font-weight:500;color:var(--soft)"><i style="width:10px;height:10px;border-radius:50%;background:var(--lime)"></i><b style="color:#fff">Phase ${PHASE}</b><span>${TAG}</span></div>`)
   const h = add(stage, `<div class="head" style="top:130px"><h1 class="serif">${TITLE}</h1><p>${SUB}</p></div>`)
-  const B = PHASE === '3' ? B3 : ['Verdex Index', 'Fees buy VERDEX', 'Verdex Lend', 'Leverage', 'Verdex on Base', 'Verdex on Solana', 'Orders without you', 'Vaults without you', 'Agent without you', 'Verdex in numbers', 'Holders vote']
+  const B = PHASE === '4' ? B4 : PHASE === '3' ? B3 : ['Verdex Index', 'Fees buy VERDEX', 'Verdex Lend', 'Leverage', 'Verdex on Base', 'Verdex on Solana', 'Orders without you', 'Vaults without you', 'Agent without you', 'Verdex in numbers', 'Holders vote']
   const board = add(stage, `<div class="board"></div>`)
   const boxes = B.map((t, i) => add(board, `<div class="bx"><span class="n">Box ${i + 1}</span><span class="t">${t}</span></div>`))
   const cap = add(stage, `<div class="cap" style="top:700px">${NEXT}</div>`)

@@ -83,6 +83,17 @@ export function SwapWidget() {
   const buyBasket = useMemo(() => (buy ? baskets?.baskets.find((x) => x.symbol.toLowerCase() === buy.toLowerCase()) : undefined), [buy, baskets])
   useEffect(() => {
     if (!buy || !chains) return
+    // /?buy=0xTOKEN&chain=ID&sym=TICKER&dec=18 preselects a tokenized stock, paid with the chain's stablecoin.
+    if (isAddress(buy)) {
+      const id = Number(params.get('chain') ?? ROBINHOOD)
+      const chain = chains.find((c) => c.id === id)
+      if (!chain) return
+      const quote: Token = id === ROBINHOOD ? USDG_RH : { chainId: 8453, address: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', symbol: 'USDC', name: 'USD Coin', decimals: 6, logoURI: TOKEN_LOGOS.USDC }
+      setFrom({ chain, token: quote })
+      setTo({ chain, token: { chainId: id, address: buy, symbol: params.get('sym') ?? 'Stock', name: params.get('sym') ?? 'Stock', decimals: Number(params.get('dec') ?? 18) } })
+      actions.setSwapTab('swap')
+      return
+    }
     if (buy.toUpperCase() === 'VERDEX') {
       const rh = chains.find((c) => c.id === ROBINHOOD)
       if (!rh) return
@@ -99,7 +110,7 @@ export function SwapWidget() {
     setFrom({ chain, token: { chainId: chain.id, address: '0x0000000000000000000000000000000000000000', symbol: native?.symbol ?? 'ETH', name: native?.symbol ?? 'ETH', decimals: native?.decimals ?? 18, logoURI: TOKEN_LOGOS[(native?.symbol ?? 'ETH') as keyof typeof TOKEN_LOGOS] ?? chain.logoURI } })
     setTo({ chain, token: { chainId: b.chainId, address: b.address, symbol: b.symbol, name: b.name, decimals: 18, logoURI: b.icon } })
     actions.setSwapTab('swap')
-  }, [buy, chains, baskets])
+  }, [buy, chains, baskets, params])
 
   useEffect(() => {
     let alive = true

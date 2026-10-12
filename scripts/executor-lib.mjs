@@ -400,3 +400,43 @@ export async function treasuryDistribute({ rpc = DEFAULT_RPC, key, treasury, rou
   log(`treasury: ${rc.status} ${hash} paid ${formatUnits(amounts.reduce((s, v) => s + v, 0n), 18)} VERDEX to ${to.length} wallets`)
   return { paid: rc.status === 'success', hash, recipients: to.length }
 }
+
+// ---- Auto-Invest into any index: one pass over VerdexIndexPlans, buying the due plans. The executor only picks the
+// number of shares: as many as one buy's USDG covers at the contract's own cap (spot plus slippage), with room for the
+// router's 0.25% fee. The contract re-checks every leg and the total.
+const indexPlansAbi = parseAbi([
+  'function planCount() view returns (uint256)',
+  'function isDue(uint256 id) view returns (bool)',
+  'function plan(uint256 id) view returns ((address owner,address index,uint96 amount,uint96 tip,uint32 interval,uint40 nextAt,uint32 buysLeft,uint32 buysDone,uint16 maxSlippageBps,bool paused,bool cancelled,uint128 spent,uint128 shares))',
+  'function capFor(uint256 id,uint256 shares) view returns (uint256 total,uint256[] perLeg)',
+  'function execute(uint256 id,uint256 shares) returns (uint256)',
+])
+export async function runIndexPlansOnce({ rpc = DEFAULT_RPC, address, key, log = console.log }) {
+  const account = privateKeyToAccount(key)
+  const pub = createPublicClient({ chain: chain(rpc), transport: http(rpc, { retryCount: 3, retryDelay: 1500, timeout: 30_000 }) })
+  const wallet = createWalletClient({ account, chain: chain(rpc), transport: http(rpc) })
+  const c = { address, abi: indexPlansAbi }
+  const count = Number(await pub.readContract({ ...c, functionName: 'planCount' }))
+  if (!count) return { count, due: 0, sent: 0, skipped: 0 }
+  const ids = Array.from({ length: count }, (_, i) => BigInt(i))
+  const due = await pub.multicall({ multicallAddress: MULTICALL3, contracts: ids.map((id) => ({ ...c, functionName: 'isDue', args: [id] })) })
+  const todo = ids.filter((_, i) => due[i].status === 'success' && due[i].result === true)
+  let sent = 0, skipped = 0
+  for (const id of todo) {
+    try {
+      const p = await pub.readContract({ ...c, functionName: 'plan', args: [id] })
+      const [capOne] = await pub.readContract({ ...c, functionName: 'capFor', args: [id, 10n ** 18n] })
+      const shares = (BigInt(p.amount) * 10n ** 18n * 10_000n) / (capOne * 10_035n)
+      const sim = await pub.simulateContract({ ...c, functionName: 'execute', args: [id, shares], account })
+      const hash = await wallet.writeContract({ ...sim.request, gas: 3_500_000n })
+      const r = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 })
+      log(`index plan ${id}: ${r.status} ${hash} ${formatUnits(shares, 18)} shares for ${formatUnits(sim.result, 6)} USDG gas ${r.gasUsed}`)
+      if (r.status === 'success') sent++
+      else skipped++
+    } catch (e) {
+      skipped++
+      log(`index plan ${id}: skipped, ${(e.shortMessage ?? e.message ?? String(e)).split('\n')[0].slice(0, 140)}`)
+    }
+  }
+  return { count, due: todo.length, sent, skipped }
+}

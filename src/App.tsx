@@ -39,6 +39,18 @@ const DeployVaultsPage = lazy(() => import('./pages/DeployVaultsPage'))
 const AgentWithoutYouPage = lazy(() => import('./pages/AgentWithoutYouPage'))
 const DeployAgentPage = lazy(() => import('./pages/DeployAgentPage'))
 const NumbersPage = lazy(() => import('./pages/NumbersPage'))
+const HoldersPage = lazy(() => import('./pages/HoldersPage'))
+const StockPage = lazy(() => import('./pages/StockPage'))
+const IndexCreatePage = lazy(() => import('./pages/IndexCreatePage'))
+const IndexViewPage = lazy(() => import('./pages/IndexViewPage'))
+const CommunityIndexesPage = lazy(() => import('./pages/CommunityIndexesPage'))
+const GiftPage = lazy(() => import('./pages/GiftPage'))
+const GiftClaimPage = lazy(() => import('./pages/GiftClaimPage'))
+const SharePage = lazy(() => import('./pages/SharePage'))
+const WatchlistPage = lazy(() => import('./pages/WatchlistPage'))
+const IndexAutoInvestPage = lazy(() => import('./pages/IndexAutoInvestPage'))
+const LeaguePage = lazy(() => import('./pages/LeaguePage'))
+import { AlertWatcher } from './components/AlertWatcher'
 const VotePage = lazy(() => import('./pages/VotePage'))
 const CopyPage = lazy(() => import('./pages/CopyPage'))
 const DeployVotePage = lazy(() => import('./pages/DeployVotePage'))
@@ -100,6 +112,15 @@ const TITLES: [string, string][] = [
   ['/agent/without-you', 'Agent without you'],
   ['/deploy/agent', 'Deploy Agent without you'],
   ['/numbers', 'Verdex in numbers'],
+  ['/holders', 'VERDEX holders'],
+  ['/index/create', 'Make your own index'],
+  ['/index/community', 'Community indexes'],
+  ['/gift', 'Gift a stock'],
+  ['/gift/claim', 'A gift for you'],
+  ['/share', 'Share cards'],
+  ['/watchlist', 'Watchlist'],
+  ['/index/auto-invest', 'Auto-Invest into any index'],
+  ['/league', 'Index league'],
   ['/vote', 'Holders vote'],
   ['/copy', 'Copy a wallet'],
   ['/deploy/vote', 'Deploy Holders vote'],
@@ -144,7 +165,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/assets" element={<AssetsPage />} />
-            <Route path="/assets/:ticker" element={<AssetsPage />} />
+            <Route path="/assets/:ticker" element={<EarlyGate path="/stock"><StockPage /></EarlyGate>} />
             <Route path="/issuers" element={<IssuersPage />} />
             <Route path="/rwa-baskets" element={<BasketsPage />} />
             <Route path="/rwa-baskets/discover" element={<DiscoverPage />} />
@@ -159,6 +180,15 @@ export default function App() {
             <Route path="/auto-invest/without-you" element={<EarlyGate path="/auto-invest/without-you"><AutoPilotPage /></EarlyGate>} />
             <Route path="/deploy/auto-invest" element={<DeployAutoInvestPage />} />
             <Route path="/index" element={<EarlyGate path="/index"><IndexPage /></EarlyGate>} />
+            <Route path="/index/create" element={<IndexCreatePage />} />
+            <Route path="/index/auto-invest" element={<IndexAutoInvestPage />} />
+            <Route path="/index/community" element={<CommunityIndexesPage />} />
+            <Route path="/gift" element={<GiftPage />} />
+            <Route path="/gift/claim" element={<GiftClaimPage />} />
+            <Route path="/share" element={<SharePage />} />
+            <Route path="/watchlist" element={<WatchlistPage />} />
+            <Route path="/league" element={<LeaguePage />} />
+            <Route path="/index/:chain/:address" element={<EarlyGate path="/index/create"><IndexViewPage /></EarlyGate>} />
             <Route path="/deploy/index" element={<DeployIndexPage />} />
             <Route path="/deploy/index/:chainKey" element={<DeployIndexPage />} />
             <Route path="/solana" element={<EarlyGate path="/solana"><SolanaPage /></EarlyGate>} />
@@ -169,6 +199,7 @@ export default function App() {
             <Route path="/agent/without-you" element={<EarlyGate path="/agent/without-you"><AgentWithoutYouPage /></EarlyGate>} />
             <Route path="/deploy/agent" element={<DeployAgentPage />} />
             <Route path="/numbers" element={<EarlyGate path="/numbers"><NumbersPage /></EarlyGate>} />
+            <Route path="/holders" element={<EarlyGate path="/holders"><HoldersPage /></EarlyGate>} />
             <Route path="/vote" element={<EarlyGate path="/vote"><VotePage /></EarlyGate>} />
             <Route path="/copy" element={<EarlyGate path="/copy"><CopyPage /></EarlyGate>} />
             <Route path="/deploy/vote" element={<DeployVotePage />} />
@@ -193,6 +224,7 @@ export default function App() {
       <Footer />
       <TabBar />
       <InstallSheet />
+      <AlertWatcher />
       <DueBuys />
       <WalletDialog />
     </>

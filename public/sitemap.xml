@@ -20,6 +20,7 @@
   <url><loc>https://useverdex.xyz/vaults/without-you</loc></url>
   <url><loc>https://useverdex.xyz/agent/without-you</loc></url>
   <url><loc>https://useverdex.xyz/numbers</loc></url>
+  <url><loc>https://useverdex.xyz/holders</loc></url>
   <url><loc>https://useverdex.xyz/vote</loc></url>
   <url><loc>https://useverdex.xyz/copy</loc></url>
   <url><loc>https://useverdex.xyz/treasury</loc></url>
@@ -32,4 +33,11 @@
   <url><loc>https://useverdex.xyz/docs</loc></url>
   <url><loc>https://useverdex.xyz/terms</loc></url>
   <url><loc>https://useverdex.xyz/privacy</loc></url>
+  <url><loc>https://useverdex.xyz/index/create</loc></url>
+  <url><loc>https://useverdex.xyz/index/community</loc></url>
+  <url><loc>https://useverdex.xyz/gift</loc></url>
+  <url><loc>https://useverdex.xyz/share</loc></url>
+  <url><loc>https://useverdex.xyz/watchlist</loc></url>
+  <url><loc>https://useverdex.xyz/index/auto-invest</loc></url>
+  <url><loc>https://useverdex.xyz/league</loc></url>
 </urlset>

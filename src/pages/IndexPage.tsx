@@ -17,6 +17,9 @@ import { useWallet } from '../components/wallet/WalletProvider'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckIcon, ExternalIcon, LayersIcon, LockIcon, PieIcon, ShieldIcon, WalletIcon } from '../components/icons'
 import { MarkIcon } from '../components/Logo'
+import { BacktestPanel } from '../components/BacktestPanel'
+import { isOfficial } from '../lib/indexes'
+import { useFeatureOpen } from '../lib/holding'
 import { Page, PageHero, Panel, Stats } from './common'
 
 const AMOUNTS = [25, 100, 250, 1000]
@@ -57,6 +60,8 @@ function Step({ n, icon, title, text }: { n: number; icon: React.ReactNode; titl
 
 function IndexCard({ x, shares, selected, onPick, wallet, chain, onChanged }: { x: IndexInfo; shares: bigint; selected: boolean; onPick: (side: 'buy' | 'sell') => void; wallet: Ctx; chain: ChainX | undefined; onChanged: () => void }) {
   const [tx, setTx] = useState<Tx>({ phase: 'idle' })
+  const [bt, setBt] = useState(false)
+  const btOpen = useFeatureOpen('/backtest', wallet.account?.address)
   const busy = tx.phase !== 'idle' && tx.phase !== 'done' && tx.phase !== 'failed'
   const pct = x.maxSupply > 0n ? Number((x.totalSupply * 10_000n) / x.maxSupply) / 100 : 0
   const held = Number(shares) / 1e18
@@ -99,9 +104,11 @@ function IndexCard({ x, shares, selected, onPick, wallet, chain, onChanged }: { 
         <Button disabled={!x.tradable} onClick={() => onPick('buy')} sx={{ ...Bt, height: 34, px: 1.75 }}>Buy</Button>
         <Button disabled={!x.tradable || shares === 0n} onClick={() => onPick('sell')} sx={{ ...Lt, backdropFilter: 'none', height: 34, px: 1.75 }}>Sell</Button>
         <Button disabled={shares === 0n || busy} onClick={() => void redeem()} sx={{ ...Lt, backdropFilter: 'none', height: 34, px: 1.75 }}>Redeem for the stocks</Button>
+        {btOpen && <Button onClick={() => setBt((v) => !v)} aria-pressed={bt} sx={{ ...Lt, backdropFilter: 'none', height: 34, px: 1.75 }}>{bt ? 'Hide backtest' : 'Backtest'}</Button>}
         {busy && <Typography sx={{ fontSize: 12, color: t.color.textMuted }}>{PHASE_LABEL[tx.phase]}</Typography>}
         <Box component="a" href={`${x.chain.explorer}/address/${x.address}`} target="_blank" rel="noopener noreferrer" sx={{ ml: 'auto', display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 12, color: t.color.textMuted, textDecoration: 'none' }}>{x.address.slice(0, 6)}…{x.address.slice(-4)} <ExternalIcon size={11} /></Box>
       </Box>
+      {bt && btOpen && <Box sx={{ mt: 2.5 }}><BacktestPanel ic={x.chain} legs={x.components.map((c) => ({ ticker: c.stock?.ticker ?? c.token, weight: c.weight }))} compact /></Box>}
       {!x.tradable && <Typography sx={{ fontSize: 12, color: t.color.red, mt: 1 }}>One of the pools behind this index is too thin to trade through right now. Redeeming in kind still works.</Typography>}
       {tx.phase === 'failed' && <Typography sx={{ fontSize: 12, color: t.color.red, mt: 1 }}>{tx.error}</Typography>}
       {tx.phase === 'done' && tx.hash && chain && <Typography sx={{ fontSize: 12, color: t.color.mark, mt: 1 }}>Redeemed. The stocks are in your wallet. <Box component="a" href={explorerTx(chain, x.chain.id, tx.hash)} target="_blank" rel="noopener noreferrer" sx={{ color: t.color.text }}>Transaction</Box></Typography>}
@@ -197,6 +204,8 @@ export default function IndexPage() {
   const ic: IndexChain = indexChain(params.get('chain') ?? undefined)
   const setChain = (c: IndexChain) => { setParams(c.key === 'robinhood' ? {} : { chain: c.key }, { replace: true }); setPicked(undefined) }
   const DEPLOYED = ic.deployed
+  const createOpen = useFeatureOpen('/index/create', account?.address)
+  const communityOpen = useFeatureOpen('/index/community', account?.address)
   const { data: chains } = useChains()
   const chain = chains?.find((c) => c.id === ic.id) as ChainX | undefined
   const assets = useAssets()
@@ -207,10 +216,11 @@ export default function IndexPage() {
   const qc = useQueryClient()
   const refresh = () => { void qc.invalidateQueries({ queryKey: ['indexes'] }); void qc.invalidateQueries({ queryKey: ['index-wallet'] }) }
   const [side, setSide] = useState<'buy' | 'sell'>('buy')
-  const [picked, setPicked] = useState<string>()
-  const index = indexes.data?.find((x) => x.address === picked) ?? indexes.data?.find((x) => x.tradable) ?? indexes.data?.[0]
+  const [picked, setPicked] = useState<string | undefined>(() => params.get('index') ?? undefined)
+  const index = indexes.data?.find((x) => x.address.toLowerCase() === picked?.toLowerCase()) ?? indexes.data?.find((x) => x.tradable) ?? indexes.data?.[0]
   useEffect(() => { if (!picked && index) setPicked(index.address) }, [picked, index])
-  const list = indexes.data ?? []
+  const list = (indexes.data ?? []).filter((x) => isOfficial(x.address))
+  const composerList = (indexes.data ?? []).filter((x) => isOfficial(x.address) || x.address.toLowerCase() === picked?.toLowerCase())
   const tvl = list.reduce((s, x) => s + x.tvlUsd, 0)
   const mine = list.reduce((s, x) => s + (Number(w.data?.shares[x.address.toLowerCase()] ?? 0n) / 1e18) * x.navUsd, 0)
   const holder = (w.data?.verdex ?? 0n) > 0n
@@ -230,6 +240,8 @@ export default function IndexPage() {
             <Button onClick={() => (account ? document.getElementById('index-composer')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) : openWalletMenu())} sx={{ ...Bt, gap: 1 }}>
               <PieIcon size={15} /> {account ? 'Buy an index' : 'Connect wallet'}
             </Button>
+            {createOpen && <Button component={Link} to={`/index/create${ic.key === 'base' ? '?chain=base' : ''}`} sx={{ ...Lt, backdropFilter: 'none', gap: 1 }}>Make your own</Button>}
+            {communityOpen && <Button component={Link} to="/index/community" sx={{ ...Lt, backdropFilter: 'none', gap: 1 }}>Community indexes</Button>}
             <Button component={Link} to="/rwa-baskets" sx={{ ...Lt, backdropFilter: 'none', gap: 1 }}>
               <LayersIcon size={14} /> Baskets, stock by stock
             </Button>
@@ -276,7 +288,7 @@ export default function IndexPage() {
           </Box>
         </Box>
         <Box id="index-composer" sx={{ minWidth: 0, scrollMarginTop: 96 }}>
-          {DEPLOYED && list.length > 0 ? <Composer indexes={list} index={index} side={side} setIndex={(x) => setPicked(x.address)} setSide={setSide} wallet={wallet} chain={chain} feeBps={feeBps} holder={holder} usdg={w.data?.usdg ?? 0n} held={index ? (w.data?.shares[index.address.toLowerCase()] ?? 0n) : 0n} onDone={refresh} /> : null}
+          {DEPLOYED && list.length > 0 ? <Composer indexes={composerList} index={index} side={side} setIndex={(x) => setPicked(x.address)} setSide={setSide} wallet={wallet} chain={chain} feeBps={feeBps} holder={holder} usdg={w.data?.usdg ?? 0n} held={index ? (w.data?.shares[index.address.toLowerCase()] ?? 0n) : 0n} onDone={refresh} /> : null}
         </Box>
       </Box>
 

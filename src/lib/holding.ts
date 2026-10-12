@@ -41,6 +41,16 @@ export const EARLY_FEATURES: EarlyFeature[] = [
   { path: '/auto-invest/without-you/base', label: 'Auto-Invest without you on Base', opensAt: '2026-10-11T15:00:00Z' },
   { path: '/vaults/without-you/base', label: 'Vaults without you on Base', opensAt: '2026-10-11T23:00:00Z' },
   { path: '/agent/without-you/rules', label: 'Agent rules v2', opensAt: '2026-10-12T15:00:00Z' },
+  { path: '/holders', label: 'Holders', opensAt: '2026-10-12T23:00:00Z' },
+  { path: '/stock', label: 'Charts', opensAt: '2026-10-13T15:00:00Z' },
+  { path: '/backtest', label: 'Backtest', opensAt: '2026-10-13T23:00:00Z' },
+  { path: '/index/create', label: 'Make your own index', opensAt: '2026-10-14T15:00:00Z' },
+  { path: '/index/community', label: 'Community indexes', opensAt: '2026-10-14T23:00:00Z' },
+  { path: '/gift', label: 'Gift a stock', opensAt: '2026-10-15T15:00:00Z' },
+  { path: '/share', label: 'Share cards', opensAt: '2026-10-15T23:00:00Z' },
+  { path: '/watchlist', label: 'Watchlist', opensAt: '2026-10-16T15:00:00Z' },
+  { path: '/index/auto-invest', label: 'Auto-Invest into any index', opensAt: '2026-10-16T23:00:00Z' },
+  { path: '/league', label: 'Index league', opensAt: '2026-10-17T15:00:00Z' },
 ]
 
 const client = () => createPublicClient({ transport: http(RPC, { retryCount: 3, retryDelay: 1200, timeout: 20_000 }) })
@@ -108,4 +118,12 @@ export function useClock(active: boolean) {
     () => 0,
   )
   return bucket * TICK
+}
+
+// Whether a feature inside a page is open for this wallet: past its date, or early access by holding.
+export function useFeatureOpen(path: string, owner?: Address) {
+  const f = earlyFeature(path)
+  const now = useClock(!!f)
+  const holding = useHolding(f ? owner : undefined)
+  return !f || (now > 0 && now + 30_000 > f.opensAtMs) || !!holding.data?.early
 }

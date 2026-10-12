@@ -4,7 +4,7 @@
 // redeems and sells them back. This module reads the indexes, prices them from the pools, builds the
 // transactions and holds the templates the deploy page creates from.
 import { useQuery } from '@tanstack/react-query'
-import { encodeDeployData, encodeFunctionData, erc20Abi, formatUnits, parseAbi, type Address, type ContractFunctionParameters } from 'viem'
+import { decodeEventLog, encodeDeployData, encodeFunctionData, erc20Abi, formatUnits, parseAbi, type Address, type ContractFunctionParameters } from 'viem'
 import factoryArtifact from '../../contracts/VerdexIndexFactory.json'
 import routerArtifact from '../../contracts/VerdexIndexRouter.json'
 import routerCLArtifact from '../../contracts/VerdexIndexRouterCL.json'
@@ -82,6 +82,34 @@ export const BASE_TEMPLATES: Template[] = [
   { name: 'Verdex AI Infrastructure', symbol: 'VXAI', tickers: ['NVDA', 'MSFT', 'GOOGL', 'AMZN', 'META', 'SNDK'], blurb: 'The chips, the clouds that rent them and the memory they fill.' },
 ]
 export const templatesFor = (ic: IndexChain) => (ic.key === 'base' ? BASE_TEMPLATES : TEMPLATES)
+// The indexes Verdex made. Anything else from the factories is a community index, shown with its creator.
+export const OFFICIAL_INDEXES = new Set([
+  '0x7809595cc37a464e973211eae8bbaffa4c5712d9', '0x5f9850cb867f3d4fbf00ceb25d6e07a2ecd2e697', '0xbdccaa07729fe69ce10177b19c9ba7bb40c57bda', '0x0356b1cbbb5fb810aba76ccf0d2c2f130fa21f87',
+  '0x9df7ab3a7b453339e6f5d63db0bef0f362c5a8bc', '0xa9f80aed4aa270c73ce65b3fb979b05898f88bf1', '0x571c69aead2a5dbe7c384a868c8522bf86f94628',
+])
+export const isOfficial = (a: string) => OFFICIAL_INDEXES.has(a.toLowerCase())
+export const COMMUNITY_CAP = 1_000_000n * 10n ** 18n
+// Units per share for a basket at the weights given, one share worth one dollar at today's pool prices.
+export function planWeights(ic: IndexChain, name: string, symbol: string, wanted: { ticker: string; weight: number }[], stocks: StockToken[], pools: Pool[]): TemplatePlan {
+  const sum = wanted.reduce((s, w) => s + w.weight, 0) || 1
+  const legs: TemplatePlan['legs'] = []
+  const missing: string[] = []
+  for (const w of wanted) {
+    const stock = stocks.find((s) => s.ticker === w.ticker)
+    const pool = stock ? poolForOn(ic, stock, pools) : undefined
+    if (!stock || !pool || !deepEnough(pool) || w.weight <= 0) { missing.push(w.ticker); continue }
+    const units = BigInt(Math.max(1, Math.round(((w.weight / sum) / pool.priceUsd) * 10 ** stock.decimals)))
+    legs.push({ ticker: w.ticker, priceUsd: pool.priceUsd, units, fee: pool.fee, liquidityUsd: pool.liquidityUsd })
+  }
+  return { name, symbol, tokens: legs.map((l) => stocks.find((s) => s.ticker === l.ticker)!.address), units: legs.map((l) => l.units), legs, missing }
+}
+// The index a creation transaction made, from its IndexCreated event.
+export async function createdIndex(ic: IndexChain, hash: `0x${string}`): Promise<Address | undefined> {
+  const r = await clientFor(ic).waitForTransactionReceipt({ hash, timeout: 180_000 })
+  const ev = factoryAbi.find((x) => x.type === 'event' && x.name === 'IndexCreated')!
+  for (const l of r.logs) { try { const d = decodeEventLog({ abi: [ev], data: l.data, topics: l.topics }); return (d.args as unknown as { index: Address }).index } catch { /* not ours */ } }
+  return undefined
+}
 // The deepest pool in the chain's quote token for a stock.
 export function poolForOn(ic: IndexChain, stock: StockToken, pools: Pool[]): Pool | undefined {
   const mine = pools.filter((p) => lc(p.quote.address) === lc(ic.quote.address) && (lc(p.token0.address) === lc(stock.address) || lc(p.token1.address) === lc(stock.address)))

@@ -232,7 +232,307 @@ const std = (s, n, a, b, R, cap, { sizeA = 100, sizeB = 96 } = {}) => {
   return (t) => { e(t); runLine(l1, t, 0.3, 2.0); runLine(l2, t, 2.3, 4.2); runFacts(rows, t); capIn(c, t, 9.2) }
 }
 
+const ep4 = (s, n) => { const el = add(s, `<div class="ep"><i></i><b>Phase 4</b><span>${n ? `${n} of 10` : 'Ten boxes'}</span></div>`); return (t) => { const p = spring(t - 0.15, 0.8); el.style.opacity = clamp(p); el.style.transform = `translate3d(0, ${(10 * (1 - p)).toFixed(1)}px, 0)` } }
+const std4 = (s, n, a, b, R, cap, { sizeA = 100, sizeB = 96 } = {}) => {
+  const e = ep4(s, n)
+  const l1 = line(s, a, { top: 470, size: sizeA })
+  const l2 = line(s, b, { top: 470, size: sizeB, color: 'var(--lime)' })
+  const rows = facts(s, R)
+  const c = add(s, `<div class="cap" style="top:790px">${cap}</div>`)
+  return (t) => { e(t); runLine(l1, t, 0.3, 2.0); runLine(l2, t, 2.3, 4.2); runFacts(rows, t); capIn(c, t, 9.2) }
+}
 const CLIPS = {
+  // ---- phase 4 ----
+  p4soon: (s) => std4(s, 0, 'Phase 3, done.', 'Phase 4, tonight.', [
+    [TL('7'), 'Phase 3 shipped', 'seven boxes in four days, every contract verified', 'done'],
+    [TL('✓'), 'Checked today', '15 contracts, 12 endpoints, 34 pages, 0 failures', 'audit'],
+    [TL('10'), 'Phase 4', 'ten boxes, five days, two a day', 'next'],
+    [TL('01'), 'First box', 'tonight, 01:00 CEST', 'soon'],
+  ], 'Phase 4 starts at 01:00 CEST. useverdex.xyz'),
+  holderslive: (s) => std4(s, 1, 'Every holder.', 'Your rank.', [
+    [TL('#'), 'Every VERDEX wallet', 'from the full transfer history, balances read from the token', 'list'],
+    [TL('+'), 'New today, this week', 'how fast the holder list grows', 'growth'],
+    [TL('%'), 'How it is spread', 'wallets by share of the supply, top ten included', 'spread'],
+    [TL('you'), 'Where you stand', 'your rank, your share, your distance to early access', 'rank'],
+  ], 'Box 1 of 10, live. useverdex.xyz/holders'),
+  holdershow: (s) => std4(s, 1, 'Counted from the mint.', 'Adds up to the supply.', [
+    [TL('1'), 'Every transfer since the mint', 'every address that ever received VERDEX', 'history'],
+    [TL('2'), 'Every balance read again', 'from the token, so sellers show zero', 'balances'],
+    [TL('3'), 'Pool and contracts apart', 'liquidity is not a whale', 'labels'],
+    [TL('{ }'), 'Open data', 'the same list at /api/holders', 'API'],
+  ], 'useverdex.xyz/holders'),
+  earlyaccess: (s) => std4(s, 1, '0.5% of the supply.', 'Every box, first.', [
+    [TL('46'), 'Wallets with early access', 'counted on the Holders page, today', 'now'],
+    [TL('⏱'), 'Every phase 4 box', 'opens for them before everyone else', 'early'],
+    [TL('?'), 'How far are you', 'connect on the Holders page and it tells you', 'check'],
+  ], 'useverdex.xyz/holders'),
+  gm4: (s) => std4(s, 1, 'One out.', 'Nine to go.', [
+    [TL('✓'), 'Holders', 'live since 01:00 CEST', 'box 1'],
+    [TL('17'), 'Charts', 'today at 17:00 CEST', 'box 2'],
+    [TL('01'), 'Backtest any basket', 'tonight at 01:00 CEST', 'box 3'],
+  ], 'Phase 4, day 1. useverdex.xyz'),
+  chartssoon: (s) => std4(s, 2, 'Every stock.', 'Its own chart. 17:00 CEST.', [
+    [IMG(LOGO.NVDA), 'Daily candles', 'from the stock’s own pool, up to 90 days', 'candles'],
+    [TL('1·7·30'), 'Day, week, month', 'the move over each, at a glance', 'moves'],
+    [TL('⌂'), 'Where you buy it', 'on every stock page and inside every index', 'inline'],
+  ], 'Box 2 of 10, today 17:00 CEST.'),
+  whycharts: (s) => std4(s, 2, 'The price you get,', 'not a price elsewhere.', [
+    [TL('24/7'), 'Onchain, around the clock', 'tokenized stocks trade on weekends too', 'always'],
+    [TL('≡'), 'The pool is the market', 'the candle is the price your trade fills at', 'same price'],
+    [TL('✕'), 'No third-party widget', 'read from the pools, drawn on the page', 'native'],
+  ], 'Charts, today 17:00 CEST.'),
+  holdersnum: (s) => std4(s, 1, 'Twelve hours', 'of Holders.', [
+    [TL('+'), 'New wallets every hour', 'counted on the page as they arrive', 'live'],
+    [TL('↗'), 'Every address linked', 'to the explorer, line by line', 'check it'],
+    [TL('you'), 'Find your number', 'connect and see your rank', 'rank'],
+  ], 'useverdex.xyz/holders'),
+  chartsone: (s) => std4(s, 2, 'Two hours', 'to charts.', [
+    [TL('17'), 'Charts', '17:00 CEST, every stock', 'box 2'],
+    [TL('01'), 'Backtest', '01:00 CEST, the same candles', 'box 3'],
+  ], 'useverdex.xyz'),
+  chartslive: (s) => std4(s, 2, 'Every stock.', 'Its own chart.', [
+    [IMG(LOGO.NVDA), 'Candles from its pool', 'daily, up to 90 days, the price you trade at', 'candles'],
+    [IMG(LOGO.TSLA), '1, 7 and 30 days', 'the move over each, on every stock', 'moves'],
+    [IMG(LOGO.SPY), 'One tap from every index', 'each stock in an index links to its chart', 'indexes'],
+  ], 'Box 2 of 10, live. useverdex.xyz/assets'),
+  chartsweekend: (s) => std4(s, 2, 'The chart', 'has weekends.', [
+    [TL('Sa'), 'Saturday and Sunday', 'tokenized stocks keep trading onchain', 'open'],
+    [TL('Mo'), 'Before the open', 'see where the pool led Monday', 'lead'],
+  ], 'Charts, live. useverdex.xyz/assets'),
+  backtestsoon: (s) => std4(s, 3, 'Before you buy it,', 'not after. 01:00 CEST.', [
+    [TL('◎'), 'Any basket', 'an index, a vault strategy or your own weights', 'pick'],
+    [TL('30·90'), 'The last 30 or 90 days', 'from the pools’ daily closes', 'window'],
+    [IMG(LOGO.SPY), 'Against SPY', 'the same window, side by side', 'compare'],
+  ], 'Box 3 of 10, tonight 01:00 CEST.'),
+  twooften: (s) => std4(s, 2, 'Two of ten.', 'Out.', [
+    [TL('✓'), 'Holders', 'every wallet, your rank', 'box 1'],
+    [TL('✓'), 'Charts', 'every stock, from its pool', 'box 2'],
+    [TL('01'), 'Backtest', 'in under two hours', 'box 3'],
+  ], 'useverdex.xyz'),
+  backtestlive: (s) => std4(s, 3, 'Any basket.', 'Backtested.', [
+    [TL('◎'), 'Indexes, vaults, your weights', 'pick any basket on the page', 'any'],
+    [TL('30·90'), 'Last 30 or 90 days', 'from each stock’s daily close in its pool', 'window'],
+    [TL('±'), 'Best day, worst day', 'and the deepest drop from a high', 'risk'],
+    [IMG(LOGO.SPY), 'Against SPY', 'the same window, side by side', 'compare'],
+  ], 'Box 3 of 10, live. Past results are not a promise.'),
+  backtesthow: (s) => std4(s, 3, 'How the backtest', 'works.', [
+    [TL('1'), 'Weights at the start', 'turned into units, like an index share', 'start'],
+    [TL('2'), 'Daily closes', 'each stock from its own pool', 'data'],
+    [TL('3'), 'Held, not rebalanced', 'the way an index share behaves', 'hold'],
+    [TL('!'), 'No fees or slippage', 'modelled, and it says so on the page', 'honest'],
+  ], 'useverdex.xyz/index'),
+  backtestvault: (s) => std4(s, 3, 'Change a weight.', 'The line redraws.', [
+    [TL('V'), 'In the vault composer', 'every strategy and your own weights', 'vaults'],
+    [TL('↺'), 'Live as you edit', 'the backtest follows your basket', 'live'],
+  ], 'useverdex.xyz/vaults'),
+  indexsoon: (s) => std4(s, 4, 'Your stocks. Your ticker.', 'Your index. 17:00 CEST.', [
+    [TL('20'), 'Up to 20 stocks', 'and the weights you choose', 'pick'],
+    [TL('$'), 'A name and a ticker', 'a real ERC-20 on Robinhood Chain', 'token'],
+    [TL('⛽'), 'You pay the gas', 'that is the whole cost of making one', 'cost'],
+  ], 'Box 4 of 10, today 17:00 CEST.'),
+  indexwhy: (s) => std4(s, 4, 'The factory', 'was always open.', [
+    [TL('2'), 'Since phase 2', 'anyone could call it with the right numbers', 'open'],
+    [TL('⚙'), 'Box 4 does the numbers', 'weights become units at today’s prices', 'units'],
+    [TL('1'), 'One transaction', 'checked against the pools, then deployed', 'deploy'],
+  ], 'Make your own index, today 17:00 CEST.'),
+  indexrules: (s) => std4(s, 4, 'Fixed units.', 'Nobody manages it.', [
+    [TL('='), 'Set once', 'nothing rebalances, nobody can change it', 'fixed'],
+    [TL('⇄'), 'Buy and sell', 'through the stocks’ own pools', 'trade'],
+    [TL('↩'), 'Redeem', 'for the stocks themselves, any time', 'in kind'],
+    [TL('!'), 'Same contract', 'as the Verdex indexes, unaudited by anyone but us', 'risk'],
+  ], 'Make your own index, today 17:00 CEST.'),
+  backtestnum: (s) => std4(s, 3, 'Half a day', 'of backtests.', [
+    [TL('◎'), 'Every basket', 'tested before it is bought', 'live'],
+    [TL('17'), 'Your own index', 'gets the same backtest before you deploy it', 'next'],
+  ], 'useverdex.xyz/index'),
+  indexone: (s) => std4(s, 4, 'Two hours.', 'Think of a ticker.', [
+    [TL('17'), 'Make your own index', '17:00 CEST, Robinhood Chain', 'box 4'],
+    [TL('01'), 'On Base too', '01:00 CEST, and every community index in one list', 'box 5'],
+  ], 'useverdex.xyz'),
+  indexlive: (s) => std4(s, 4, 'Make your own', 'index.', [
+    [TL('20'), 'Up to 20 stocks', 'your weights, your name, your ticker', 'yours'],
+    [TL('◎'), 'Backtested first', 'see what it would have done before you deploy', 'test'],
+    [TL('$'), 'A real ERC-20', 'backed by the stocks, buy, sell or redeem', 'token'],
+    [TL('✓'), 'Verified contracts', 'the same as the Verdex indexes, unaudited', 'risk'],
+  ], 'Box 4 of 10, live. useverdex.xyz/index/create'),
+  indexshare: (s) => std4(s, 4, 'Every index', 'gets a page.', [
+    [TL('≡'), 'Its holdings', 'each stock and its weight', 'holds'],
+    [TL('◎'), 'Its backtest', '30 and 90 days', 'test'],
+    [TL('⇢'), 'A buy button', 'send the link, anyone can buy it', 'link'],
+  ], 'useverdex.xyz/index/community'),
+  basesoon4: (s) => std4(s, 5, 'On Base too.', 'And one list. 01:00 CEST.', [
+    [IMG(ISS('coinbase.png')), 'Your index on Base', 'from Coinbase’s tokenized stocks, in USDC', 'Base'],
+    [TL('≡'), 'Every community index', 'both chains, one list', 'list'],
+    [TL('@'), 'Who made it', 'the creator’s wallet next to every index', 'creator'],
+  ], 'Box 5 of 10, tonight 01:00 CEST.'),
+  fourofen: (s) => std4(s, 4, 'Four of ten.', 'Out.', [
+    [TL('✓'), 'Holders, charts', 'boxes 1 and 2', 'done'],
+    [TL('✓'), 'Backtest, your own index', 'boxes 3 and 4', 'done'],
+    [TL('01'), 'Base and the community list', 'tonight, 01:00 CEST', 'next'],
+  ], 'useverdex.xyz'),
+  communitylive: (s) => std4(s, 5, 'Every index,', 'both chains.', [
+    [IMG(ISS('coinbase.png')), 'Make it on Base', 'Coinbase’s tokenized stocks, quoted in USDC', 'Base'],
+    [TL('≡'), 'One list', 'every index anyone made on Robinhood Chain and Base', 'list'],
+    [TL('@'), 'Creator, stocks, TVL', 'and the backtest of each', 'detail'],
+  ], 'Box 5 of 10, live. useverdex.xyz/index/community'),
+  halfway4: (s) => std4(s, 5, 'Halfway.', 'Five more.', [
+    [TL('1-5'), 'Holders, charts, backtest', 'your own index, community indexes', 'done'],
+    [TL('6'), 'Gift a stock', 'today, 17:00 CEST', 'next'],
+    [TL('7-10'), 'Cards, alerts, index Auto-Invest', 'and the index league', 'coming'],
+  ], 'Phase 4, halfway. useverdex.xyz'),
+  giftsoon: (s) => std4(s, 6, 'A stock', 'in a link. 17:00 CEST.', [
+    [IMG(LOGO.NVDA), 'Any tokenized stock', 'or USDG, any amount', 'gift'],
+    [TL('🔗'), 'Send a link', 'whoever opens it claims it to their wallet', 'claim'],
+    [TL('↩'), 'Not claimed?', 'it comes back to you after the expiry', 'safe'],
+  ], 'Box 6 of 10, today 17:00 CEST.'),
+  gifthow: (s) => std4(s, 6, 'Nobody can grab it', 'on the way.', [
+    [TL('🔑'), 'A one-time key in the link', 'never sent to any server', 'key'],
+    [TL('✍'), 'The receiver signs', 'their own address with it to claim', 'claim'],
+    [TL('⛓'), 'Watchers get nothing', 'a copied claim pays the same receiver', 'safe'],
+    [TL('↩'), 'Until then', 'only you can take it back', 'yours'],
+  ], 'Gift a stock, today 17:00 CEST.'),
+  communitynum: (s) => std4(s, 5, 'The community list,', 'night one.', [
+    [TL('@'), 'Every index, every creator', 'nothing curated, nothing promoted', 'open'],
+    [TL('◎'), 'Each with its backtest', 'and what it holds', 'detail'],
+  ], 'useverdex.xyz/index/community'),
+  giftwhy: (s) => std4(s, 6, 'From “I own a stock”', 'to “you do too”.', [
+    [TL('🎂'), 'Birthdays', 'a share instead of a card', 'gift'],
+    [TL('🤝'), 'Bets you lost', 'pay up in NVDA', 'settle'],
+    [TL('👋'), 'Onboarding friends', 'all they need is a wallet', 'welcome'],
+  ], 'Gift a stock, today 17:00 CEST.'),
+  giftsoon2: (s) => std4(s, 6, 'Gifts,', 'in a few hours.', [
+    [TL('⛓'), 'Its own contract', 'on Robinhood Chain, verified', 'contract'],
+    [TL('!'), 'Unaudited', 'and open source, like everything else', 'risk'],
+  ], 'Box 6 of 10, 17:00 CEST.'),
+  giftone: (s) => std4(s, 6, 'Two hours.', 'Pick who gets the first.', [
+    [TL('17'), 'Gift a stock', '17:00 CEST', 'box 6'],
+    [TL('01'), 'Share cards', '01:00 CEST', 'box 7'],
+  ], 'useverdex.xyz'),
+  giftlive: (s) => std4(s, 6, 'Gift', 'a stock.', [
+    [IMG(LOGO.NVDA), 'A stock or USDG', 'an amount and an expiry', 'choose'],
+    [TL('🔗'), 'A link', 'with a one-time key, nothing on a server', 'send'],
+    [TL('✍'), 'Claimed with a signature', 'straight into their wallet', 'claim'],
+    [TL('↩'), 'Unclaimed comes back', 'after the expiry you set', 'safe'],
+  ], 'Box 6 of 10, live. useverdex.xyz/gift'),
+  giftreclaim: (s) => std4(s, 6, 'Wrong person?', 'Take it back.', [
+    [TL('≡'), 'Your sent gifts', 'listed on the page', 'list'],
+    [TL('⏱'), 'After the expiry', 'one click returns it to you', 'reclaim'],
+  ], 'useverdex.xyz/gift'),
+  cardssoon: (s) => std4(s, 7, 'Your bag,', 'as an image. 01:00 CEST.', [
+    [TL('▣'), 'Holdings', 'what you hold, valued at the pools', 'bag'],
+    [TL('◎'), 'Any index', 'its chart and its backtest', 'index'],
+    [TL('#'), 'Your holder rank', 'from the Holders page', 'rank'],
+  ], 'Box 7 of 10, tonight 01:00 CEST.'),
+  sixoften: (s) => std4(s, 6, 'Six of ten.', 'Four to go.', [
+    [TL('✓'), 'Holders, charts, backtest', 'boxes 1 to 3', 'done'],
+    [TL('✓'), 'Your index, two chains, gifts', 'boxes 4 to 6', 'done'],
+    [TL('01'), 'Share cards', 'tonight, 01:00 CEST', 'next'],
+  ], 'useverdex.xyz'),
+  cardslive: (s) => std4(s, 7, 'Share', 'cards.', [
+    [TL('▣'), 'Your holdings', 'valued at the pools when you make it', 'bag'],
+    [TL('◎'), 'Any index', 'with its chart and backtest', 'index'],
+    [TL('#'), 'Your holder rank', 'read from the chain', 'rank'],
+    [TL('⌂'), 'Drawn on your device', 'no upload, nothing stored', 'private'],
+  ], 'Box 7 of 10, live. useverdex.xyz/share'),
+  cardsprivacy: (s) => std4(s, 7, 'Show what', 'you choose.', [
+    [TL('%'), 'Weights only', 'hide the amounts', 'hide'],
+    [TL('0x'), 'No address', 'hide the wallet', 'hide'],
+    [TL('⌂'), 'No upload', 'the image is made on your device', 'local'],
+  ], 'useverdex.xyz/share'),
+  cardsindex: (s) => std4(s, 7, 'Your index,', 'on a card.', [
+    [TL('~'), 'Chart and backtest', 'on the image', 'card'],
+    [TL('⇢'), 'The link under it', 'opens the buy button', 'buy'],
+  ], 'useverdex.xyz/share'),
+  alertssoon: (s) => std4(s, 8, 'Star it.', 'Set a level. 17:00 CEST.', [
+    [TL('★'), 'Watchlist', 'the stocks you care about, in one place', 'watch'],
+    [TL('↕'), 'Price alerts', 'above or below a level you set', 'alert'],
+    [TL('🔔'), 'A notification', 'when the pool crosses it', 'notify'],
+  ], 'Box 8 of 10, today 17:00 CEST.'),
+  alertshow: (s) => std4(s, 8, 'In your browser.', 'Not on our server.', [
+    [TL('⌂'), 'List and levels', 'stay in your browser', 'local'],
+    [TL('60s'), 'Every minute', 'the page reads the pools', 'check'],
+    [TL('⇢'), 'Rather it traded?', 'one click to an order without you', 'orders'],
+  ], 'Watchlist and alerts, today 17:00 CEST.'),
+  cardsnum: (s) => std4(s, 7, 'Cards,', 'half a day in.', [
+    [TL('@'), 'Tag us', 'we read every one', 'post'],
+  ], 'useverdex.xyz/share'),
+  autoindexsoon: (s) => std4(s, 9, 'A basket that', 'buys itself. 01:00 CEST.', [
+    [TL('◎'), 'Any index', 'a Verdex one or the one you made', 'index'],
+    [TL('⏱'), 'On a schedule', 'daily, weekly or monthly', 'recurring'],
+    [TL('⌂'), 'Wallet closed', 'it runs without you', 'without you'],
+  ], 'Box 9 of 10, tonight 01:00 CEST.'),
+  alertsone: (s) => std4(s, 8, 'Two hours', 'to the watchlist.', [
+    [TL('17'), 'Watchlist and alerts', '17:00 CEST', 'box 8'],
+    [TL('01'), 'Auto-Invest into any index', '01:00 CEST', 'box 9'],
+  ], 'useverdex.xyz'),
+  alertslive: (s) => std4(s, 8, 'Watchlist', 'and alerts.', [
+    [TL('★'), 'Star any stock', 'your list, in your browser', 'watch'],
+    [TL('↕'), 'Above or below', 'any level you set', 'alert'],
+    [TL('🔔'), 'Notified in a minute', 'when its pool crosses', 'notify'],
+    [TL('⇢'), 'Or let it trade', 'one click to an order without you', 'orders'],
+  ], 'Box 8 of 10, live. useverdex.xyz/watchlist'),
+  alertsapp: (s) => std4(s, 8, 'Verdex,', 'on your home screen.', [
+    [TL('📱'), 'Install as an app', 'on your phone or your desktop', 'app'],
+    [TL('🔔'), 'Alerts come with it', 'notifications from the app', 'alerts'],
+  ], 'useverdex.xyz/watchlist'),
+  autoindexhow: (s) => std4(s, 9, 'How it buys', 'a basket for you.', [
+    [IMG(USDG), 'An exact USDG budget', 'approved once', 'allowance'],
+    [TL('⏱'), 'On schedule', 'the executor buys shares through the index router', 'buy'],
+    [TL('≤'), 'A cap per buy', 'unspent USDG comes back with the shares', 'cap'],
+    [TL('■'), 'Pause, cancel, revoke', 'whenever you like', 'control'],
+  ], 'Auto-Invest into any index, 01:00 CEST.'),
+  eightoften: (s) => std4(s, 8, 'Eight of ten.', 'Two to go.', [
+    [TL('01'), 'Auto-Invest into any index', 'tonight, 01:00 CEST', 'box 9'],
+    [TL('17'), 'The index league', 'tomorrow, 17:00 CEST', 'box 10'],
+  ], 'useverdex.xyz'),
+  autoindexlive: (s) => std4(s, 9, 'Auto-Invest', 'into any index.', [
+    [TL('◎'), 'Any index', 'Verdex’s or the community’s', 'index'],
+    [TL('⏱'), 'Daily, weekly, monthly', 'runs while your wallet is closed', 'schedule'],
+    [TL('≤'), 'Capped per buy', 'shares straight to your wallet', 'cap'],
+    [TL('✓'), 'New contract', 'verified, unaudited, holds nothing between buys', 'risk'],
+  ], 'Box 9 of 10, live. useverdex.xyz/index/auto-invest'),
+  autoindexwhy: (s) => std4(s, 9, 'A fund', 'you run yourself.', [
+    [TL('4'), 'Tuesday', 'you chose the stocks', 'index'],
+    [TL('9'), 'Today', 'it buys itself every week', 'auto'],
+    [TL('0%'), 'Management fee', 'there is none, including ours', 'fees'],
+  ], 'useverdex.xyz/index/auto-invest'),
+  leaguesoon: (s) => std4(s, 10, 'Every index,', 'ranked. 17:00 CEST.', [
+    [TL('7·30'), 'Over 7 and 30 days', 'from the pools’ daily closes', 'ranking'],
+    [TL('$'), 'What it holds', 'shown next to every move', 'TVL'],
+    [TL('@'), 'Who made it', 'community and Verdex in one table', 'creators'],
+  ], 'Box 10 of 10, today 17:00 CEST.'),
+  gm4b: (s) => std4(s, 9, 'Last box', 'today.', [
+    [TL('17'), 'The index league', '17:00 CEST', 'box 10'],
+    [TL('⏳'), 'Make your index first', 'to be on the first table', 'tip'],
+  ], 'useverdex.xyz/index/create'),
+  leaguerules: (s) => std4(s, 10, 'League', 'rules.', [
+    [TL('↗'), 'The move since the window began', 'daily closes from each pool', 'rank'],
+    [TL('$'), 'TVL next to it', 'big and tiny are not confused', 'context'],
+    [TL('='), 'Same table for everyone', 'Verdex indexes included, nothing promoted', 'fair'],
+  ], 'The index league, today 17:00 CEST.'),
+  recap4a: (s) => std4(s, 9, 'Five days.', 'Nine boxes.', [
+    [TL('1-3'), 'Holders, charts, backtests', 'see before you buy', 'see'],
+    [TL('4-6'), 'Your index, two chains, gifts', 'make and give', 'make'],
+    [TL('7-9'), 'Cards, alerts, index Auto-Invest', 'share and automate', 'share'],
+  ], 'One box left. 17:00 CEST.'),
+  leagueone: (s) => std4(s, 10, 'Last box.', '17:00 CEST.', [
+    [TL('⏳'), 'Last call', 'for a seat on the first table', 'go'],
+  ], 'useverdex.xyz/index/create'),
+  leaguelive: (s) => std4(s, 10, 'The index', 'league.', [
+    [TL('≡'), 'Every index, both chains', 'Verdex’s and the community’s', 'all'],
+    [TL('7·30'), 'Ranked over 7 and 30 days', 'from each stock’s daily close in its pool', 'rank'],
+    [TL('@'), 'What it holds, who made it', 'next to every row', 'detail'],
+  ], 'Box 10 of 10, live. Phase 4 done. useverdex.xyz/league'),
+  thanks4: (s) => std4(s, 10, 'You built', 'half of this.', [
+    [TL('◎'), 'Every index you made', 'onchain and yours', 'yours'],
+    [TL('🎁'), 'Every gift you sent', 'in someone else’s wallet now', 'given'],
+    [TL('✓'), 'Everything we built', 'open source and verified', 'ours'],
+  ], 'Thank you. useverdex.xyz'),
+  next5: (s) => std4(s, 10, 'Phase 5', 'is yours to rank.', [
+    [TL('1'), 'Round 1 is open', 'until October 20', 'vote'],
+    [TL('◆'), 'Holders rank it', 'weighted by VERDEX held', 'weight'],
+    [TL('→'), 'It decides what comes first', 'in phase 5', 'next'],
+  ], 'useverdex.xyz/vote'),
   baselive: (s) => std(s, 5, 'Base. Live.', 'Verdex on Base.', [
     [IMG(ISS('coinbase.png')), "Coinbase's stocks", 'NVDAc, TSLAc, AAPLc and the rest, in their Aerodrome pools', 'Base'],
     [IMG(USDC), 'USDC in, shares out', 'one transaction buys every stock and mints your shares', 'one tx'],

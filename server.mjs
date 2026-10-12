@@ -5,7 +5,7 @@ import http from 'node:http'
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
 import { extname, join, normalize, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
-import { runOnce, runOrdersOnce, runVaultsOnce, runAgentOnce, executorBalance, refuelIfNeeded, treasurySweep, treasuryDistribute } from './scripts/executor-lib.mjs'
+import { runOnce, runOrdersOnce, runVaultsOnce, runAgentOnce, runIndexPlansOnce, executorBalance, refuelIfNeeded, treasurySweep, treasuryDistribute } from './scripts/executor-lib.mjs'
 import { TREASURY_ADDRESS } from './scripts/treasury-address.mjs'
 import { INDEX_ROUTER_ADDRESS } from './scripts/index-addresses.mjs'
 import { AUTOINVEST_ADDRESS as BUILT_IN, BASE_AUTOINVEST_ADDRESS as BASE_AUTOINVEST_BUILT_IN } from './scripts/autoinvest-address.mjs'
@@ -13,6 +13,8 @@ import { ORDERS_ADDRESS as ORDERS_BUILT_IN, BASE_ORDERS_ADDRESS as BASE_ORDERS_B
 import { VAULTS_ADDRESS as VAULTS_BUILT_IN, BASE_VAULTS_ADDRESS as BASE_VAULTS_BUILT_IN } from './scripts/vaults-address.mjs'
 import { AGENT_ADDRESS as AGENT_BUILT_IN } from './scripts/agent-address.mjs'
 import { apiRead, isApiPath } from './scripts/api-lib.mjs'
+import { relayClaim } from './scripts/gift-relay.mjs'
+import { INDEX_PLANS_ADDRESS as INDEX_PLANS_BUILT_IN } from './scripts/index-plans-address.mjs'
 
 const ROOT = resolve('dist')
 const PORT = Number(process.env.PORT ?? 8080)
@@ -36,7 +38,13 @@ function send(req, res, file, status = 200) {
 }
 
 const server = http.createServer((req, res) => {
-  if (req.method === 'OPTIONS') { res.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, OPTIONS', 'access-control-max-age': '86400' }); return res.end() }
+  if (req.method === 'OPTIONS') { res.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' }); return res.end() }
+  if (req.method === 'POST' && req.url === '/api/gift/claim') {
+    let raw = ''
+    req.on('data', (d) => { raw += d; if (raw.length > 4096) req.destroy() })
+    req.on('end', () => { let body; try { body = JSON.parse(raw) } catch { body = null } const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim(); relayClaim(key, ip, body).then((r) => { res.writeHead(r.status, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }); res.end(JSON.stringify(r.body)) }) })
+    return
+  }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end() }
   let path
   try { path = decodeURIComponent(new URL(req.url, 'http://x').pathname) } catch { res.writeHead(400); return res.end() }
@@ -57,7 +65,18 @@ const server = http.createServer((req, res) => {
   if (extname(path) && !path.endsWith('.html')) { res.writeHead(404, { 'content-type': 'text/plain' }); return res.end('not found') }
   return send(req, res, join(ROOT, 'index.html'))
 })
-server.listen(PORT, () => console.log(`verdex serving ${ROOT} on :${PORT}`))
+server.listen(PORT, () => { console.log(`verdex serving ${ROOT} on :${PORT}`); apiRead('/api/holders').catch(() => {}); if (!process.env.NO_WARM) setTimeout(warmCandles, 20_000) })
+// Keep every stock pool's daily candles in the cache, so charts, backtests and the league load at once. The fetches
+// are paced inside the API library; a full round takes a few minutes and runs every twenty-five.
+async function warmCandles() {
+  for (const chain of ['robinhood', 'base']) {
+    try {
+      const r = JSON.parse((await apiRead(chain === 'base' ? '/api/pools/base' : '/api/pools')).body)
+      for (const p of r.data ?? []) await apiRead(`/api/candles/${chain}/${p.pool}`).catch(() => {})
+    } catch { /* next round */ }
+  }
+  setTimeout(warmCandles, 25 * 60_000)
+}
 
 // ---- executor ----
 const key = process.env.EXECUTOR_KEY ?? (existsSync('executor.key') ? readFileSync('executor.key', 'utf8').trim() : '')
@@ -68,6 +87,7 @@ const agentAddress = process.env.AGENT_ADDRESS || AGENT_BUILT_IN
 const baseOrdersAddress = process.env.BASE_ORDERS_ADDRESS || BASE_ORDERS_BUILT_IN
 const baseAutoInvestAddress = process.env.BASE_AUTOINVEST_ADDRESS || BASE_AUTOINVEST_BUILT_IN
 const baseVaultsAddress = process.env.BASE_VAULTS_ADDRESS || BASE_VAULTS_BUILT_IN
+const indexPlansAddress = process.env.INDEX_PLANS_ADDRESS || INDEX_PLANS_BUILT_IN
 const BASE_RPC = process.env.BASE_RPC || 'https://mainnet.base.org'
 const EVERY = Number(process.env.EXECUTOR_EVERY_MS ?? 10 * 60 * 1000)
 if (key && address) {
@@ -97,6 +117,10 @@ if (key && address) {
       if (baseVaultsAddress) {
         const vb = await runVaultsOnce({ rpc: BASE_RPC, chainId: 8453, address: baseVaultsAddress, key, log: (m) => console.log(`[executor] ${m}`) }).catch((e) => { console.log(`[executor] base vaults pass failed: ${(e.shortMessage ?? e.message ?? String(e)).slice(0, 160)}`); return null })
         if (vb?.due) console.log(`[executor] base vaults ${vb.count} · due ${vb.due} · sent ${vb.sent} · skipped ${vb.skipped}`)
+      }
+      if (indexPlansAddress) {
+        const ip = await runIndexPlansOnce({ rpc: process.env.RPC, address: indexPlansAddress, key, log: (m) => console.log(`[executor] ${m}`) }).catch((e) => { console.log(`[executor] index plans pass failed: ${(e.shortMessage ?? e.message ?? String(e)).slice(0, 160)}`); return null })
+        if (ip?.due) console.log(`[executor] index plans ${ip.count} · due ${ip.due} · sent ${ip.sent} · skipped ${ip.skipped}`)
       }
       if (agentAddress) {
         const a = await runAgentOnce({ rpc: process.env.RPC, address: agentAddress, key, log: (m) => console.log(`[executor] ${m}`) }).catch((e) => { console.log(`[executor] agent pass failed: ${(e.shortMessage ?? e.message ?? String(e)).slice(0, 160)}`); return null })

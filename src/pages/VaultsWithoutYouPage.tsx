@@ -8,11 +8,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { BRAND, t, z } from '../theme/tokens'
 import { Bt, Lt, Vg } from '../theme/styles'
 import { fmtCompact, useAssets, useChains } from '../lib/api'
-import { useClock } from '../lib/holding'
+import { useClock, useFeatureOpen } from '../lib/holding'
 import { describeError, type ChainX } from '../lib/lifi'
 import { PHASE_LABEL, stockTokensOn, usePoolsOn, type Phase, type Pool, type StockToken } from '../lib/pools'
 import { DEFAULT_SLIPPAGE_BPS, DEFAULT_TIP, INTERVALS, PRESETS, THRESHOLDS, VAULT_CHAINS, approveHoldings, createVault, deepEnough, fmtUsdg, fmtWhen, intervalLabel, normalise, poolFor, presetTargets, revokeHoldings, runNow, setPaused, toBps, useOnchainVaults, useVaultTotals, vaultChain, type OnchainLeg, type OnchainVault, type Target, type VaultChain } from '../lib/vaultsOnchain'
 import { EarlyGate } from '../components/EarlyGate'
+import { BacktestPanel } from '../components/BacktestPanel'
 import { resolveImg } from '../lib/img'
 import { useWallet } from '../components/wallet/WalletProvider'
 import { CheckIcon, ExternalIcon, LockIcon, PauseIcon, RefreshIcon, ShieldIcon, VaultIcon, WalletIcon } from '../components/icons'
@@ -58,6 +59,7 @@ const pct = (bps: number, d = 1) => `${(bps / 100).toFixed(d)}%`
 function Composer({ vc, stocks, pools, loading, wallet, chain, onDone }: { vc: VaultChain; stocks: StockToken[]; pools: Pool[]; loading: boolean; wallet: Ctx; chain: ChainX | undefined; onDone: () => void }) {
   // A draft can arrive in the query string (from Copy a wallet): TICKER:WEIGHT pairs become the custom targets.
   const [params] = useSearchParams()
+  const btOpen = useFeatureOpen('/backtest', wallet.account?.address)
   const [wanted] = useState(() => (params.get('tokens') ?? '').split(',').map((x) => { const [tk, w] = x.split(':'); return { ticker: tk.trim().toUpperCase(), weight: Number(w) } }).filter((x) => x.ticker && isFinite(x.weight) && x.weight > 0))
   const [presetId, setPresetId] = useState(wanted.length ? 'query' : 'mag7')
   const [custom, setCustom] = useState<Target[]>([])
@@ -136,6 +138,7 @@ function Composer({ vc, stocks, pools, loading, wallet, chain, onDone }: { vc: V
           </Box>
         </Box>
       )}
+      {btOpen && targets.length > 0 && <Box sx={{ mt: 2.5, p: 2, borderRadius: t.radius.input, background: t.color.raised }}><BacktestPanel ic={vc.ic} legs={targets.map((x) => ({ ticker: x.stock.ticker, weight: x.weight }))} compact /></Box>}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2.5, mt: 3 }}>
         <Box>
           <Label>Rebalance when a weight drifts</Label>

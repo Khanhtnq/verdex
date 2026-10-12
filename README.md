@@ -95,6 +95,12 @@ Live at [useverdex.xyz](https://useverdex.xyz). Token: VERDEX on Robinhood Chain
 - **Copy a wallet.** `/copy` (`src/lib/copy.ts`): reads the tokenized stocks any address holds on Robinhood Chain,
   values them at the pools and turns them into weights; Copy saves a vault on this device at those weights (funded
   on the Vaults page, leg by leg with floors), Keep opens Vaults without you with the weights filled in. No contract.
+- **Phase 4.** `/holders` (VERDEX holders from the token's transfer history, `holders()` in `scripts/api-lib.mjs`);
+  `/assets/:ticker` stock pages with daily candles (`/api/candles/<chain>/<pool>`, GeckoTerminal, paced and cached
+  on the server); backtests (`src/lib/backtest.ts`); `/index/create` and `/index/community` over the open index
+  factories; `contracts/VerdexGift.sol` with `/gift`, `/gift/claim` and the claim relay (`scripts/gift-relay.mjs`);
+  `/share` cards drawn on a canvas; `/watchlist` alerts kept in the browser; `contracts/VerdexIndexPlans.sol` with
+  `/index/auto-invest` and the executor's `runIndexPlansOnce`; `/league`.
 - **Verdex API.** `scripts/api-lib.mjs`, served by `server.mjs` at `/api/*`: numbers, indexes (both chains), the
   without-you contracts and their executions, the treasury, the aggregator volume, the pools and the asset list, as
   JSON with a sixty-second cache and open CORS. The same reads the site makes, made by the server. `GET /api` lists them.
