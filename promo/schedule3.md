@@ -461,3 +461,15 @@ Phase 3, seven boxes: 1 Copy a wallet (Oct 9, 17:00) · 2 Verdex API (Oct 10, 01
 > Phase 1, phase 2, phase 3: every one of them open source, verified, read from the chain, from your own wallet. We are small, and we are not slowing down. Phase 4 starts where round 1 ends.
 >
 > useverdex.xyz
+
+## Fix and audit, Oct 12 (photo, post now)
+
+### `photo-fixaudit.png`
+
+> Pools, Index and the baskets stopped loading after our API update. That one was on us.
+>
+> The new API route answered a data file the site reads with a 404, so the pages that need the list of stocks never finished loading. Contracts were never involved: nothing was touched and no funds were at risk.
+>
+> Fixed, then we audited production end to end: 15 of 15 contracts verified on Sourcify, 12 of 12 API endpoints up, 34 of 34 pages loading with no errors. Full write-up in the repo.
+>
+> useverdex.xyz

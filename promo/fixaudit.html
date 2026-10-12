@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Verdex production audit still</title>
+<style>
+@font-face { font-family: Geist; src: url(../src/fonts/Geist-400.woff2) format('woff2'); font-weight: 400; }
+@font-face { font-family: Geist; src: url(../src/fonts/Geist-500.woff2) format('woff2'); font-weight: 500; }
+@font-face { font-family: Geist; src: url(../src/fonts/Geist-600.woff2) format('woff2'); font-weight: 600; }
+@font-face { font-family: 'LT Remark'; src: url(../src/fonts/LT-Remark-400.woff2) format('woff2'); font-weight: 400; }
+:root { --bg: #050505; --lime: #C2EA8A; --amber: #FFD27A; --tile: #151515; --panel: #0D0D0D; --muted: rgba(255,255,255,.55); }
+html, body { margin: 0; background: var(--bg); }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); color: #fff; font-family: Geist, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 80px 80px; }
+.glow { position: absolute; left: 50%; top: 50%; width: 1700px; height: 1000px; margin: -500px 0 0 -850px; background: radial-gradient(closest-side, rgba(194,234,138,.12), rgba(194,234,138,0)); }
+.left { position: absolute; left: 120px; top: 150px; width: 640px; }
+.tag { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 18px; border-radius: 10px; background: rgba(194,234,138,.14); color: var(--lime); font-size: 18px; font-weight: 600; letter-spacing: .08em; }
+.tag i { width: 9px; height: 9px; border-radius: 50%; background: var(--lime); }
+h1 { font-family: 'LT Remark', serif; font-weight: 400; font-size: 132px; line-height: .98; letter-spacing: -0.035em; margin: 34px 0 30px; }
+.left p { font-size: 28px; line-height: 1.4; color: rgba(255,255,255,.72); margin: 0; }
+.url { position: absolute; left: 120px; bottom: 110px; display: inline-flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 500; }
+.url i { width: 11px; height: 11px; border-radius: 50%; background: var(--lime); }
+.card { position: absolute; right: 120px; top: 120px; width: 960px; padding: 34px 36px; box-sizing: border-box; border-radius: 24px; background: var(--panel); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 40px 120px rgba(0,0,0,.7); }
+.lab { font-size: 15px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 18px; }
+.row { display: flex; align-items: center; gap: 18px; min-height: 76px; padding: 0 22px; border-radius: 14px; background: var(--tile); margin-top: 12px; }
+.row b { width: 150px; font-size: 22px; font-weight: 600; flex-shrink: 0; }
+.row span { font-size: 20px; color: var(--muted); line-height: 1.35; }
+.mark { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-size: 20px; font-weight: 700; flex-shrink: 0; }
+.ok { background: rgba(194,234,138,.16); color: var(--lime); }
+.warn { background: rgba(255,210,122,.16); color: var(--amber); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="grid"></div><div class="glow"></div>
+  <div class="left">
+    <span class="tag"><i></i>PRODUCTION AUDIT</span>
+    <h1>Found, fixed, checked.</h1>
+    <p>Pools, Index and baskets stopped loading after our API update. The cause was ours, in the web server, not in any contract.</p>
+  </div>
+  <div class="url"><i></i>useverdex.xyz</div>
+  <div class="card">
+    <div class="lab">Verdex · production audit · October 12, 2026</div>
+    <div class="row"><span class="mark warn">!</span><b>Cause</b><span>The new API route answered a data file the site reads, with a 404</span></div>
+    <div class="row"><span class="mark warn">!</span><b>Effect</b><span>Pools, Index and baskets could not load their list of stocks</span></div>
+    <div class="row"><span class="mark ok">✓</span><b>Fix</b><span>Static files are served again; the public API is unchanged</span></div>
+    <div class="row"><span class="mark ok">✓</span><b>Contracts</b><span>15 of 15 with code onchain and an exact Sourcify match</span></div>
+    <div class="row"><span class="mark ok">✓</span><b>API</b><span>12 of 12 endpoints answer</span></div>
+    <div class="row"><span class="mark ok">✓</span><b>Pages</b><span>34 of 34 load their data with no errors</span></div>
+    <div class="row"><span class="mark ok">✓</span><b>Funds</b><span>No contract was touched and no funds were at risk</span></div>
+  </div>
+</div>
+<script>document.fonts.ready.then(() => { window.__ready = true })</script>
+</body>
+</html>
