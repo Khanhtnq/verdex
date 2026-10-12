@@ -41,8 +41,10 @@ const server = http.createServer((req, res) => {
   let path
   try { path = decodeURIComponent(new URL(req.url, 'http://x').pathname) } catch { res.writeHead(400); return res.end() }
   // The API: the same reads the site makes, as JSON, cached sixty seconds, open to anyone.
-  if (path === '/api' || path.startsWith('/api/')) {
-    const key = path.replace(/\/+$/, '') || '/api'
+  // Static files under /api (the site's own data, e.g. /api/assets.json) are served as files, not as endpoints.
+  const apiKey = path.replace(/\/+$/, '') || '/api'
+  if ((path === '/api' || path.startsWith('/api/')) && (isApiPath(apiKey) || !extname(path))) {
+    const key = apiKey
     if (!isApiPath(key)) { res.writeHead(404, { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*' }); return res.end('{"ok":false,"error":"no such endpoint; GET /api lists them"}') }
     return apiRead(key).then((r) => { res.writeHead(r.status, { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*', 'cache-control': 'public, max-age=60', age: String(r.age) }); req.method === 'HEAD' ? res.end() : res.end(r.body) }).catch(() => { res.writeHead(500); res.end() })
   }
