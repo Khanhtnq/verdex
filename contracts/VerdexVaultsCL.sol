@@ -219,8 +219,8 @@ contract VerdexVaultsCL {
             soldUsdg += _swap(pool, L[i].token, units, address(this), floor_);
         }
 
-        // 2. The tip, out of the proceeds.
-        uint256 tip = v.tip;
+        // 2. The tip, out of the proceeds (waived when the owner rebalances their own vault).
+        uint256 tip = msg.sender == v.owner ? 0 : v.tip;
         if (tip > soldUsdg) tip = soldUsdg;
         if (tip != 0) require(IERC20(usdg).transfer(msg.sender, tip), "tip");
         uint256 cash = soldUsdg - tip;
@@ -260,8 +260,9 @@ contract VerdexVaultsCL {
         _activePool = address(pool);
         (int256 a0, int256 a1) = pool.swap(recipient, zeroForOne, int256(amountIn), zeroForOne ? MIN_SQRT_RATIO + 1 : MAX_SQRT_RATIO - 1, abi.encode(tokenIn));
         _activePool = address(0);
+        uint256 inAmt = uint256(zeroForOne ? a0 : a1);
         amountOut = uint256(-(zeroForOne ? a1 : a0));
-        if (amountOut < minOut) revert Slippage();
+        if (inAmt != amountIn || amountOut < minOut) revert Slippage();
     }
 
     /// @dev Uniswap v3 asks for the input token here, mid-swap. Only the pool being swapped may call.

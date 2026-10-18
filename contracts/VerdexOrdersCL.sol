@@ -205,7 +205,7 @@ contract VerdexOrdersCL {
 
         IUniswapV3Pool pool = _pool(o);
         uint256 amountIn = o.amountIn;
-        uint256 tip = o.tip;
+        uint256 tip = msg.sender == o.owner ? 0 : o.tip;
         bool buyWithUsdg = o.tokenIn == usdg;
 
         // One pull for the amount (and the tip, when the order pays in USDG). Reverts if allowance or balance is short.
@@ -217,8 +217,9 @@ contract VerdexOrdersCL {
         _activePool = address(pool);
         (int256 a0, int256 a1) = pool.swap(recipient, zeroForOne, int256(amountIn), zeroForOne ? MIN_SQRT_RATIO + 1 : MAX_SQRT_RATIO - 1, abi.encode(o.tokenIn));
         _activePool = address(0);
+        uint256 inAmt = uint256(zeroForOne ? a0 : a1);
         amountOut = uint256(-(zeroForOne ? a1 : a0));
-        if (amountOut < minOut) revert Slippage();
+        if (inAmt != amountIn || amountOut < minOut) revert Slippage();
 
         if (buyWithUsdg) {
             if (tip != 0) require(IERC20(usdg).transfer(msg.sender, tip), "tip");
@@ -226,6 +227,7 @@ contract VerdexOrdersCL {
             if (tip > amountOut) tip = amountOut; // never more than the proceeds
             if (tip != 0) require(IERC20(usdg).transfer(msg.sender, tip), "tip");
             amountOut -= tip;
+            if (amountOut < minOut) revert Slippage();
             require(IERC20(usdg).transfer(o.owner, amountOut), "out");
         }
 

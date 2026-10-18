@@ -251,7 +251,7 @@ contract VerdexAgent {
 
         address token = _tokens[id][i];
         IUniswapV3Pool pool = _pool(token, _fees[id][i]);
-        uint256 tip = m.tip;
+        uint256 tip = msg.sender == m.owner ? 0 : m.tip;
         uint256 value = sell ? quoteSpot(id, i, true, amountIn) : amountIn;
 
         if (block.timestamp >= uint256(m.dayStart) + 1 days) {
@@ -277,6 +277,7 @@ contract VerdexAgent {
             if (tip > amountOut) tip = amountOut;
             if (tip != 0) require(IERC20(usdg).transfer(msg.sender, tip), "tip");
             amountOut -= tip;
+            if (amountOut < minOut) revert Slippage();
             require(IERC20(usdg).transfer(m.owner, amountOut), "out");
             m.sold += uint96(amountOut);
         }
@@ -288,8 +289,9 @@ contract VerdexAgent {
         _activePool = address(pool);
         (int256 a0, int256 a1) = pool.swap(recipient, zeroForOne, int256(amountIn), zeroForOne ? MIN_SQRT_RATIO + 1 : MAX_SQRT_RATIO - 1, abi.encode(tokenIn));
         _activePool = address(0);
+        uint256 inAmt = uint256(zeroForOne ? a0 : a1);
         amountOut = uint256(-(zeroForOne ? a1 : a0));
-        if (amountOut < minOut) revert Slippage();
+        if (inAmt != amountIn || amountOut < minOut) revert Slippage();
     }
 
     /// @dev Uniswap v3 asks for the input token here, mid-swap. Only the pool being swapped may call.

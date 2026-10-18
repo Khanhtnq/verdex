@@ -172,7 +172,9 @@ contract VerdexIndexRouterCL {
             _activePool = address(pool);
             (int256 a0, int256 a1) = pool.swap(address(this), zeroForOne, int256(amounts[i]), zeroForOne ? MIN_SQRT_RATIO + 1 : MAX_SQRT_RATIO - 1, abi.encode(tokens[i]));
             _activePool = address(0);
+            uint256 inAmt = uint256(zeroForOne ? a0 : a1);
             uint256 outAmt = uint256(-(zeroForOne ? a1 : a0));
+            if (inAmt < amounts[i]) revert Short();
             if (outAmt < minOutPerLeg[i]) revert Slippage();
             received += outAmt;
         }

@@ -185,13 +185,16 @@ export function useOrdersWallet(oc: OrdersChain, owner: Address | undefined, sto
 export { deepEnough, poolFor }
 export type NewOrder = { stock: StockToken; pool: Pool; kind: Kind; levelUsd: number; amountIn: bigint; tip: bigint; slippageBps: number; expiresAt: number }
 
+const onChain = (ctx: TxCtx, ic: IndexChain): TxCtx => ({ ...ctx, chain: ctx.chain && ctx.chain.id === ic.id ? ctx.chain : ({ id: ic.id, key: ic.key, name: ic.name, chainType: 'EVM', logoURI: '', mainnet: true, metamask: { rpcUrls: ic.rpcUrls, blockExplorerUrls: [ic.explorer] } } as TxCtx['chain']) })
+
 async function approveExact(ctx: TxCtx, oc: OrdersChain, token: Address, amount: bigint) {
   ctx.onPhase('approving')
   const hash = await ctx.walletClient.sendTransaction({ account: ctx.account.address, chain: null, to: token, data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [oc.contract, amount] }) })
-  await waitForTx(ctx.chain ?? ({ id: oc.ic.id } as never), hash)
+  await waitForTx(onChain(ctx, oc.ic).chain!, hash)
 }
 // Place: an exact allowance for what the fill may pull (amount plus tip on a buy, the stock amount on a sell), then the order.
-export async function placeOrder(ctx: TxCtx, oc: OrdersChain, o: NewOrder) {
+export async function placeOrder(ctx0: TxCtx, oc: OrdersChain, o: NewOrder) {
+  const ctx = onChain(ctx0, oc.ic)
   await ensureChainOn(ctx, oc.ic)
   const k = KINDS.find((x) => x.key === o.kind)!
   const tokenIn = k.side === 'buy' ? oc.quote.address : o.stock.address
@@ -199,19 +202,21 @@ export async function placeOrder(ctx: TxCtx, oc: OrdersChain, o: NewOrder) {
   const need = k.side === 'buy' ? o.amountIn + o.tip : o.amountIn
   const c = clientFor(oc.ic)
   const allowance = await c.readContract({ address: tokenIn, abi: erc20Abi, functionName: 'allowance', args: [ctx.account.address, oc.contract] })
-  if (allowance < need) await approveExact(ctx, oc, tokenIn, need)
+  await approveExact(ctx, oc, tokenIn, allowance + need)
   const { trigger, whenAtOrBelow } = triggerFor(o.pool, o.levelUsd, k.below)
   const data = oc.isCL
     ? encodeFunctionData({ abi: abiCL, functionName: 'place', args: [tokenIn, tokenOut, tierOf(oc, o.pool), o.amountIn, o.tip, trigger, whenAtOrBelow, o.slippageBps, o.expiresAt] })
     : encodeFunctionData({ abi, functionName: 'place', args: [tokenIn, tokenOut, tierOf(oc, o.pool), o.amountIn, o.tip, trigger, whenAtOrBelow, o.slippageBps, o.expiresAt] })
   return sendTx(ctx, oc.contract, data)
 }
-export async function cancelOrder(ctx: TxCtx, oc: OrdersChain, id: bigint) {
+export async function cancelOrder(ctx0: TxCtx, oc: OrdersChain, id: bigint) {
+  const ctx = onChain(ctx0, oc.ic)
   await ensureChainOn(ctx, oc.ic)
   return sendTx(ctx, oc.contract, encodeFunctionData({ abi, functionName: 'cancel', args: [id] }))
 }
 // The owner may fill a triggered order themselves, with the same floor the executor gets.
-export async function fillNow(ctx: TxCtx, oc: OrdersChain, id: bigint) {
+export async function fillNow(ctx0: TxCtx, oc: OrdersChain, id: bigint) {
+  const ctx = onChain(ctx0, oc.ic)
   await ensureChainOn(ctx, oc.ic)
   const floor = await clientFor(oc.ic).readContract({ address: oc.contract, abi, functionName: 'floorOut', args: [id] })
   return sendTx(ctx, oc.contract, encodeFunctionData({ abi, functionName: 'execute', args: [id, floor] }))

@@ -154,19 +154,23 @@ export const deepEnough = (pool: Pool | undefined) => !!pool && pool.liquidityUs
 
 export type NewPlan = { stock: StockToken; pool: Pool; amount: bigint; tip: bigint; interval: number; firstAt: number; buys: number; slippageBps: number; budget: bigint }
 
+const onChain = (ctx: TxCtx, ic: IndexChain): TxCtx => ({ ...ctx, chain: ctx.chain && ctx.chain.id === ic.id ? ctx.chain : ({ id: ic.id, key: ic.key, name: ic.name, chainType: 'EVM', logoURI: '', mainnet: true, metamask: { rpcUrls: ic.rpcUrls, blockExplorerUrls: [ic.explorer] } } as TxCtx['chain']) })
+
 // The allowance is the plan's budget: exact, never unlimited, so the owner always knows the most the
 // contract can ever pull. Revoking it ends every plan at once.
 async function approveExact(ctx: TxCtx, pc: PlanChain, amount: bigint) {
   ctx.onPhase('approving')
   const hash = await ctx.walletClient.sendTransaction({ account: ctx.account.address, chain: null, to: pc.quote.address, data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [pc.contract, amount] }) })
-  await waitForTx(ctx.chain ?? ({ id: pc.ic.id } as never), hash)
+  await waitForTx(onChain(ctx, pc.ic).chain!, hash)
 }
-export async function setAllowance(ctx: TxCtx, pc: PlanChain, amount: bigint) {
+export async function setAllowance(ctx0: TxCtx, pc: PlanChain, amount: bigint) {
+  const ctx = onChain(ctx0, pc.ic)
   await ensureChainOn(ctx, pc.ic)
   await approveExact(ctx, pc, amount)
   ctx.onPhase('done')
 }
-export async function createPlan(ctx: TxCtx, pc: PlanChain, p: NewPlan) {
+export async function createPlan(ctx0: TxCtx, pc: PlanChain, p: NewPlan) {
+  const ctx = onChain(ctx0, pc.ic)
   await ensureChainOn(ctx, pc.ic)
   const { allowance } = await readAllowance(pc, ctx.account.address)
   if (allowance < p.budget) await approveExact(ctx, pc, p.budget)
@@ -175,16 +179,19 @@ export async function createPlan(ctx: TxCtx, pc: PlanChain, p: NewPlan) {
     : encodeFunctionData({ abi, functionName: 'createPlan', args: [pc.quote.address, p.stock.address, p.pool.fee, p.amount, p.tip, p.interval, p.firstAt, p.buys, p.slippageBps] })
   return sendTx(ctx, pc.contract, data)
 }
-export async function setPaused(ctx: TxCtx, pc: PlanChain, id: bigint, paused: boolean) {
+export async function setPaused(ctx0: TxCtx, pc: PlanChain, id: bigint, paused: boolean) {
+  const ctx = onChain(ctx0, pc.ic)
   await ensureChainOn(ctx, pc.ic)
   return sendTx(ctx, pc.contract, encodeFunctionData({ abi, functionName: 'setPaused', args: [id, paused] }))
 }
-export async function cancelPlan(ctx: TxCtx, pc: PlanChain, id: bigint) {
+export async function cancelPlan(ctx0: TxCtx, pc: PlanChain, id: bigint) {
+  const ctx = onChain(ctx0, pc.ic)
   await ensureChainOn(ctx, pc.ic)
   return sendTx(ctx, pc.contract, encodeFunctionData({ abi, functionName: 'cancel', args: [id] }))
 }
 // The owner may run a due plan themselves, with the same price floor the executor gets.
-export async function runNow(ctx: TxCtx, pc: PlanChain, id: bigint) {
+export async function runNow(ctx0: TxCtx, pc: PlanChain, id: bigint) {
+  const ctx = onChain(ctx0, pc.ic)
   await ensureChainOn(ctx, pc.ic)
   const floor = await clientFor(pc.ic).readContract({ address: pc.contract, abi, functionName: 'floorOut', args: [id] })
   return sendTx(ctx, pc.contract, encodeFunctionData({ abi, functionName: 'execute', args: [id, floor] }))

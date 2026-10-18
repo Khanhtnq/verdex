@@ -158,8 +158,11 @@ export function useVaultTotals(vc: VaultChain) {
   return useQuery({ queryKey: ['vaults-onchain-totals', vc.key], queryFn: () => readTotals(vc), enabled: vc.deployed, staleTime: 60_000, refetchInterval: 120_000, retry: 1 })
 }
 
+const onChain = (ctx: TxCtx, ic: IndexChain): TxCtx => ({ ...ctx, chain: ctx.chain && ctx.chain.id === ic.id ? ctx.chain : ({ id: ic.id, key: ic.key, name: ic.name, chainType: 'EVM', logoURI: '', mainnet: true, metamask: { rpcUrls: ic.rpcUrls, blockExplorerUrls: [ic.explorer] } } as TxCtx['chain']) })
+
 export type NewVault = { targets: Target[]; thresholdBps: number; interval: number; slippageBps: number; tip: bigint }
-export async function createVault(ctx: TxCtx, vc: VaultChain, v: NewVault) {
+export async function createVault(ctx0: TxCtx, vc: VaultChain, v: NewVault) {
+  const ctx = onChain(ctx0, vc.ic)
   await ensureChainOn(ctx, vc.ic)
   const data = vc.isCL
     ? encodeFunctionData({ abi: abiCL, functionName: 'create', args: [v.targets.map((t) => t.stock.address), v.targets.map((t) => t.pool.spacing), toBps(v.targets), v.thresholdBps, v.interval, v.slippageBps, v.tip] })
@@ -167,7 +170,8 @@ export async function createVault(ctx: TxCtx, vc: VaultChain, v: NewVault) {
   return sendTx(ctx, vc.contract, data)
 }
 // Approve each stock for exactly what the wallet holds today: the most a rebalance can ever sell of it.
-export async function approveHoldings(ctx: TxCtx, vc: VaultChain, tokens: Address[], onToken?: (i: number) => void) {
+export async function approveHoldings(ctx0: TxCtx, vc: VaultChain, tokens: Address[], onToken?: (i: number) => void) {
+  const ctx = onChain(ctx0, vc.ic)
   await ensureChainOn(ctx, vc.ic)
   const c = clientFor(vc.ic)
   const CONTRACT = vc.contract
@@ -178,25 +182,28 @@ export async function approveHoldings(ctx: TxCtx, vc: VaultChain, tokens: Addres
     if (allowance >= bal) continue
     ctx.onPhase('approving')
     const hash = await ctx.walletClient.sendTransaction({ account: ctx.account.address, chain: null, to: tokens[i], data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [CONTRACT, bal] }) })
-    await waitForTx(ctx.chain ?? ({ id: vc.ic.id } as never), hash)
+    await waitForTx(ctx.chain!, hash)
   }
   ctx.onPhase('done')
 }
-export async function revokeHoldings(ctx: TxCtx, vc: VaultChain, tokens: Address[]) {
+export async function revokeHoldings(ctx0: TxCtx, vc: VaultChain, tokens: Address[]) {
+  const ctx = onChain(ctx0, vc.ic)
   await ensureChainOn(ctx, vc.ic)
   const CONTRACT = vc.contract
   for (const token of tokens) {
     ctx.onPhase('approving')
     const hash = await ctx.walletClient.sendTransaction({ account: ctx.account.address, chain: null, to: token, data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [CONTRACT, 0n] }) })
-    await waitForTx(ctx.chain ?? ({ id: vc.ic.id } as never), hash)
+    await waitForTx(ctx.chain!, hash)
   }
   ctx.onPhase('done')
 }
-export async function setPaused(ctx: TxCtx, vc: VaultChain, id: bigint, paused: boolean) {
+export async function setPaused(ctx0: TxCtx, vc: VaultChain, id: bigint, paused: boolean) {
+  const ctx = onChain(ctx0, vc.ic)
   await ensureChainOn(ctx, vc.ic)
   return sendTx(ctx, vc.contract, encodeFunctionData({ abi, functionName: 'setPaused', args: [id, paused] }))
 }
-export async function runNow(ctx: TxCtx, vc: VaultChain, id: bigint) {
+export async function runNow(ctx0: TxCtx, vc: VaultChain, id: bigint) {
+  const ctx = onChain(ctx0, vc.ic)
   await ensureChainOn(ctx, vc.ic)
   return sendTx(ctx, vc.contract, encodeFunctionData({ abi, functionName: 'execute', args: [id] }))
 }

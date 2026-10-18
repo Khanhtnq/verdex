@@ -5,7 +5,7 @@ import { encodeFunctionData, erc20Abi, parseAbi, type Address } from 'viem'
 import { INDEX_PLANS_ADDRESS } from '../../scripts/index-plans-address.mjs'
 import { ROBINHOOD } from './api'
 import { waitForTx } from './lifi'
-import { USDG, client, ensureChain, sendTx, type TxCtx } from './pools'
+import { RPC, USDG, client, ensureChain, sendTx, type TxCtx } from './pools'
 import type { IndexInfo } from './indexes'
 
 export const PLANS = INDEX_PLANS_ADDRESS as Address
@@ -44,7 +44,7 @@ export async function createPlan(ctx: TxCtx, x: IndexInfo, amount: bigint, inter
   const need = current + budgetFor(amount, buys, interval)
   ctx.onPhase('approving')
   const h = await ctx.walletClient.sendTransaction({ account: ctx.account.address, chain: null, to: USDG.address, data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [PLANS, need] }) })
-  await waitForTx(ctx.chain ?? ({ id: ROBINHOOD } as never), h)
+  await waitForTx(ctx.chain && ctx.chain.id === ROBINHOOD ? ctx.chain : ({ id: ROBINHOOD, metamask: { rpcUrls: [RPC] } } as never), h)
   return sendTx(ctx, PLANS, encodeFunctionData({ abi, functionName: 'create', args: [x.address, x.fees, amount, TIP, interval, 0, buys, SLIPPAGE_BPS] }))
 }
 export async function setPaused(ctx: TxCtx, id: bigint, paused: boolean) { await ensureChain(ctx); return sendTx(ctx, PLANS, encodeFunctionData({ abi, functionName: 'setPaused', args: [id, paused] })) }

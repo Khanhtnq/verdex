@@ -5,7 +5,7 @@ import { encodeFunctionData, erc20Abi, parseAbi, type Address } from 'viem'
 import { OPTIONS_ADDRESS } from '../../scripts/p2p-address.mjs'
 import { ROBINHOOD } from './api'
 import { waitForTx } from './lifi'
-import { MULTICALL3, USDG, client, ensureChain, sendTx, type TxCtx } from './pools'
+import { MULTICALL3, RPC, USDG, client, ensureChain, sendTx, type TxCtx } from './pools'
 
 export const OPTIONS = OPTIONS_ADDRESS as Address
 export const abi = parseAbi([
@@ -31,13 +31,14 @@ export async function readOptions(): Promise<Option[]> {
 export function useOptions() {
   return useQuery({ queryKey: ['options'], queryFn: readOptions, refetchInterval: 30_000 })
 }
+const rhChain = (ctx: TxCtx) => (ctx.chain && ctx.chain.id === ROBINHOOD ? ctx.chain : ({ id: ROBINHOOD, metamask: { rpcUrls: [RPC] } } as never))
 async function approve(ctx: TxCtx, token: Address, amount: bigint) {
   if (amount === 0n) return
   const allowance = await client().readContract({ address: token, abi: erc20Abi, functionName: 'allowance', args: [ctx.account.address, OPTIONS] })
   if (allowance >= amount) return
   ctx.onPhase('approving')
   const h = await ctx.walletClient.sendTransaction({ account: ctx.account.address, chain: null, to: token, data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [OPTIONS, amount] }) })
-  await waitForTx(ctx.chain ?? ({ id: ROBINHOOD } as never), h)
+  await waitForTx(rhChain(ctx), h)
 }
 async function call(ctx: TxCtx, data: `0x${string}`) {
   const hash = await sendTx(ctx, OPTIONS, data)

@@ -185,7 +185,7 @@ contract VerdexAutoInvest {
 
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(p.tokenIn, p.tokenOut, p.fee));
         uint256 amountIn = p.amountIn;
-        uint256 tip = p.tip;
+        uint256 tip = msg.sender == p.owner ? 0 : p.tip;
 
         // One pull for the buy and the tip. Reverts if the allowance or balance is short.
         require(IERC20(p.tokenIn).transferFrom(p.owner, address(this), amountIn + tip), "pull");
@@ -194,8 +194,9 @@ contract VerdexAutoInvest {
         _activePool = address(pool);
         (int256 a0, int256 a1) = pool.swap(p.owner, zeroForOne, int256(amountIn), zeroForOne ? MIN_SQRT_RATIO + 1 : MAX_SQRT_RATIO - 1, abi.encode(p.tokenIn));
         _activePool = address(0);
+        uint256 inAmt = uint256(zeroForOne ? a0 : a1);
         amountOut = uint256(-(zeroForOne ? a1 : a0));
-        if (amountOut < minOut) revert Slippage();
+        if (inAmt != amountIn || amountOut < minOut) revert Slippage();
 
         if (tip != 0) require(IERC20(p.tokenIn).transfer(msg.sender, tip), "tip");
 

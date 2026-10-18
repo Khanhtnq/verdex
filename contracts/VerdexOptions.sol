@@ -71,8 +71,7 @@ contract VerdexOptions {
         if (isPut) {
             if (_pullIn(usdg, msg.sender, strike) != strike) revert TransferFailed();
         } else {
-            amount = _pullIn(IERC20(underlying), msg.sender, amount);
-            if (amount == 0) revert BadArgs();
+            if (_pullIn(IERC20(underlying), msg.sender, amount) != amount) revert TransferFailed();
         }
         id = _options.length;
         _options.push(Option(msg.sender, address(0), underlying, isPut, 0, expiresAt, amount, strike, premium));
@@ -96,7 +95,15 @@ contract VerdexOptions {
     function transfer(uint256 id, address to) external {
         Option storage o = _get(id);
         if (msg.sender != o.holder || o.state != 0) revert NotHolder();
-        if (to == address(0)) revert BadArgs();
+        if (to == address(0) || to == msg.sender) revert BadArgs();
+        uint256[] storage fromHeld = _held[msg.sender];
+        for (uint256 i = 0; i < fromHeld.length; i++) {
+            if (fromHeld[i] == id) {
+                fromHeld[i] = fromHeld[fromHeld.length - 1];
+                fromHeld.pop();
+                break;
+            }
+        }
         o.holder = to;
         _held[to].push(id);
         emit Transferred(id, msg.sender, to);
@@ -109,10 +116,14 @@ contract VerdexOptions {
         if (block.timestamp >= o.expiresAt) revert Expired();
         o.state = 1;
         if (o.isPut) {
+            uint256 before = IERC20(o.underlying).balanceOf(o.writer);
             _pull(IERC20(o.underlying), msg.sender, o.writer, o.amount);
+            if (IERC20(o.underlying).balanceOf(o.writer) - before != o.amount) revert TransferFailed();
             _push(usdg, msg.sender, o.strike);
         } else {
+            uint256 before = usdg.balanceOf(o.writer);
             _pull(usdg, msg.sender, o.writer, o.strike);
+            if (usdg.balanceOf(o.writer) - before != o.strike) revert TransferFailed();
             _push(IERC20(o.underlying), msg.sender, o.amount);
         }
         emit Exercised(id, msg.sender);
