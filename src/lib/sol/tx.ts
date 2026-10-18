@@ -67,15 +67,16 @@ export async function quoteBuyLegs(stocks: { mint: string; symbol: string; decim
 export async function quoteSellLegs(held: { mint: string; symbol: string; decimals: number; amount: bigint }[], slippageBps: number, signal?: AbortSignal): Promise<Leg[]> {
   return Promise.all(held.filter((h) => h.amount > 0n).map(async (s) => ({ mint: s.mint, symbol: s.symbol, decimals: s.decimals, quote: await jupQuote({ inputMint: s.mint, outputMint: USDC_MINT, amount: s.amount, slippageBps, signal }) })))
 }
-// All the transactions of a basket trade, ready to sign. On a buy the fee rides in front of the first leg (the
-// wallet holds the USDC already); on a sell it rides behind the last leg, paid out of the USDC that leg produces.
-export async function buildLegTxs(conn: Connection, user: PublicKey, legs: Leg[], fee: { wallet: PublicKey; amount: bigint } | undefined, feeAt: 'first' | 'last' = 'first'): Promise<{ txs: VersionedTransaction[]; blockhash: string; lastValidBlockHeight: number }> {
+// All the transactions of a basket trade, ready to sign. On a buy the fee rides in front of each leg (or the first leg);
+// on a sell it rides behind each leg, paid out of the guaranteed minimum USDC that leg produces.
+export async function buildLegTxs(conn: Connection, user: PublicKey, legs: Leg[], fee: { wallet: PublicKey; amount?: bigint; amounts?: bigint[] } | undefined, feeAt: 'first' | 'last' | 'each-first' | 'each-last' = 'first'): Promise<{ txs: VersionedTransaction[]; blockhash: string; lastValidBlockHeight: number }> {
   const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash('confirmed')
   const txs: VersionedTransaction[] = []
-  const feeIx = fee && fee.amount > 0n ? feeInstructions(user, fee.wallet, fee.amount) : []
+  const after = feeAt === 'last' || feeAt === 'each-last'
   for (let i = 0; i < legs.length; i++) {
-    const here = feeAt === 'first' ? i === 0 : i === legs.length - 1
-    txs.push(await buildSwapTx(conn, user, legs[i].quote, here ? feeIx : [], blockhash, feeAt === 'last'))
+    const legAmt = fee?.amounts ? (fee.amounts[i] ?? 0n) : (fee && ((feeAt === 'first' && i === 0) || (feeAt === 'last' && i === legs.length - 1)) ? (fee.amount ?? 0n) : 0n)
+    const feeIx = fee && legAmt > 0n ? feeInstructions(user, fee.wallet, legAmt) : []
+    txs.push(await buildSwapTx(conn, user, legs[i].quote, feeIx, blockhash, after))
   }
   return { txs, blockhash, lastValidBlockHeight }
 }

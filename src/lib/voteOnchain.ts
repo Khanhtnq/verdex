@@ -67,20 +67,26 @@ export async function readRound(id: bigint, me?: Address): Promise<Round> {
   const n = options.length - shipped.size
   const points = options.map(() => 0n), firsts = options.map(() => 0n)
   let weightVoting = 0n
+  let eligibleVoters = 0
   let mine: number[] | undefined
   for (let i = 0; i < voters.length; i += 100) {
     const batch = voters.slice(i, i + 100)
     const res = await c.multicall({ multicallAddress: MULTICALL3, batchSize: 4096, contracts: batch.flatMap((v) => [
       { address: CONTRACT, abi, functionName: 'rankingOf', args: [id, v] } as const,
       { address: VERDEX_TOKEN.address, abi: erc20Abi, functionName: 'balanceOf', args: [v] } as const,
+      { address: CONTRACT, abi, functionName: 'votedAt', args: [id, v] } as const,
     ]) })
     batch.forEach((v, k) => {
-      const ranking = res[k * 2].status === 'success' ? ([...(res[k * 2].result as readonly number[])] as number[]) : []
-      const w = res[k * 2 + 1].status === 'success' ? (res[k * 2 + 1].result as bigint) : 0n
+      const ranking = res[k * 3].status === 'success' ? ([...(res[k * 3].result as readonly number[])] as number[]) : []
+      const w = res[k * 3 + 1].status === 'success' ? (res[k * 3 + 1].result as bigint) : 0n
+      const at = res[k * 3 + 2].status === 'success' ? Number(res[k * 3 + 2].result as number | bigint) : 0
+      if (at === 0 || at > closesAt) return
+      eligibleVoters += 1
       if (me && v.toLowerCase() === me.toLowerCase()) mine = ranking
       if (w === 0n || !ranking.length) return
       weightVoting += w
-      ranking.filter((opt) => !shipped.has(opt) && opt < options.length).forEach((opt, pos) => { { points[opt] += w * BigInt(n - pos); if (pos === 0) firsts[opt] += w } })
+      const seen = new Set<number>()
+      ranking.filter((opt) => !shipped.has(opt) && opt < options.length && !seen.has(opt) && (seen.add(opt), true)).forEach((opt, pos) => { points[opt] += w * BigInt(n - pos); if (pos === 0) firsts[opt] += w })
     })
   }
   const [supply, myBal] = await Promise.all([
@@ -91,7 +97,7 @@ export async function readRound(id: bigint, me?: Address): Promise<Round> {
   const candidates: Candidate[] = options.map((label, index) => ({ index, label, points: points[index], firsts: firsts[index], share: total > 0n ? Number((points[index] * 10_000n) / total) / 100 : 0, rank: 0 })).filter((x) => !shipped.has(x.index))
   candidates.sort((a, b) => (b.points > a.points ? 1 : b.points < a.points ? -1 : a.index - b.index))
   candidates.forEach((x, i) => (x.rank = i + 1))
-  return { id, title, options: [...options], shipped: [...shipped].map((i) => options[i]), opensAt: Number(opensAt), closesAt: Number(closesAt), open: openHere, voterCount: Number(voterCount), weightVoting, supply, candidates, mine, myWeight: me ? myBal : 0n }
+  return { id, title, options: [...options], shipped: [...shipped].map((i) => options[i]), opensAt: Number(opensAt), closesAt: Number(closesAt), open: openHere, voterCount: eligibleVoters, weightVoting, supply, candidates, mine, myWeight: me ? myBal : 0n }
 }
 export async function readRounds(me?: Address): Promise<Round[]> {
   if (!DEPLOYED) return []

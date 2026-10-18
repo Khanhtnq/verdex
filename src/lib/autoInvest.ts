@@ -5,7 +5,7 @@
 import { useSyncExternalStore } from 'react'
 import { encodeFunctionData, erc20Abi, maxUint256, parseUnits, type Address, type WalletClient } from 'viem'
 import { LIFI, ROBINHOOD, lifiInit, type Chain } from './api'
-import { chainMeta, fetchQuote, isNative, readAllowance, waitForTx, type ChainX, type Quote } from './lifi'
+import { chainMeta, fetchQuoteWithFee, isNative, readAllowance, waitForTx, type ChainX, type Quote } from './lifi'
 import { VERDEX_TOKEN, readHolding } from './holding'
 
 export { VERDEX_TOKEN }
@@ -145,12 +145,8 @@ export async function quotePlan(plan: Plan, fromAddress: Address, holder: boolea
   const units = (plan.amountUsd / price).toFixed(Math.min(plan.pay.decimals, 8))
   const fromAmount = parseUnits(units as `${number}`, plan.pay.decimals).toString()
   const base = { fromChain: plan.pay.chainId, toChain: plan.target.chainId, fromToken: plan.pay.address, toToken: plan.target.address, fromAmount, fromAddress, slippage: 0.01, signal }
-  if (holder || !(VERDEX_FEE > 0)) return { quote: await fetchQuote(base), fromAmount }
-  try {
-    return { quote: await fetchQuote({ ...base, fee: VERDEX_FEE }), fromAmount }
-  } catch {
-    return { quote: await fetchQuote(base), fromAmount }
-  }
+  const quote = await fetchQuoteWithFee(base, !holder && VERDEX_FEE > 0 ? VERDEX_FEE : undefined)
+  return { quote, fromAmount }
 }
 
 export type Phase = 'idle' | 'switching' | 'pricing' | 'approving' | 'confirming' | 'pending' | 'done' | 'failed'

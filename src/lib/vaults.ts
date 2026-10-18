@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from 'react'
 import { encodeFunctionData, erc20Abi, formatUnits, maxUint256, parseUnits, type Address, type WalletClient } from 'viem'
 import { ROBINHOOD, type Asset, type Chain } from './api'
-import { chainMeta, fetchQuote, isNative, readAllowance, readBalance, waitForTx, type ChainX } from './lifi'
+import { chainMeta, fetchQuoteWithFee, isNative, readAllowance, readBalance, waitForTx, type ChainX } from './lifi'
 import { PAY_TOKENS, VERDEX_FEE, tokenPrice, type PlanToken } from './autoInvest'
 
 export type VaultAsset = { ticker: string; name: string; logo?: string; token: PlanToken; weight: number }
@@ -226,15 +226,7 @@ export async function executeRebalance(v: Vault, trades: PlannedTrade[], ctx: { 
       }
       if (fromAmount <= 0n) continue
       const base = { fromChain: v.chainId, toChain: v.chainId, fromToken: from.address, toToken: to.address, fromAmount: fromAmount.toString(), fromAddress: ctx.account.address, slippage: 0.01 }
-      let quote
-      if (ctx.holder || !(VERDEX_FEE > 0)) quote = await fetchQuote(base)
-      else {
-        try {
-          quote = await fetchQuote({ ...base, fee: VERDEX_FEE })
-        } catch {
-          quote = await fetchQuote(base)
-        }
-      }
+      const quote = await fetchQuoteWithFee(base, !ctx.holder && VERDEX_FEE > 0 ? VERDEX_FEE : undefined)
       const tx = quote.transactionRequest
       if (!tx) throw new Error('This route cannot be prepared right now. Try again in a moment.')
       if (!isNative(from.address)) {
