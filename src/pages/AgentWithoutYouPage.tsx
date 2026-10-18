@@ -222,7 +222,7 @@ function MandateCard({ m, wallet, chain, onChanged }: { m: OnchainMandate; walle
   }
   const tickers = m.legs.map((l) => l.stock?.ticker ?? l.token.slice(0, 6))
   const needUsdg = rule.side !== 'sell' ? budgetAllowance(m) : 0n
-  const usdgShort = m.state === 'active' && rule.side !== 'sell' && m.usdgAllowance < (needUsdg < m.perTrade + m.tip ? needUsdg : m.perTrade + m.tip)
+  const usdgShort = m.state === 'active' && rule.side !== 'sell' && m.budget >= 1_000_000n && m.usdgAllowance < (needUsdg < m.perTrade + m.tip ? needUsdg : m.perTrade + m.tip)
   const stocksShort = m.state === 'active' && rule.side !== 'buy' ? m.legs.filter((l) => l.balance > 0n && l.allowance === 0n) : []
   const dot = m.state === 'active' ? t.color.mark : m.state === 'paused' ? '#FFE866' : t.color.textFaint
   const label = m.state === 'active' ? 'Watching, checks every ten minutes' : m.state === 'paused' ? 'Paused' : m.state === 'closed' ? 'Closed' : m.state === 'expired' ? 'Expired' : 'Budget spent'
@@ -264,13 +264,13 @@ function MandateCard({ m, wallet, chain, onChanged }: { m: OnchainMandate; walle
         ))}
       </Box>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, alignItems: 'center' }}>
-        {usdgShort && <Button disabled={busy} onClick={() => void act((c) => approveUsdg(c, needUsdg))} sx={{ ...Bt, height: 34, px: 1.75 }}>Approve {fmtUsdg(needUsdg)} USDG</Button>}
+        {usdgShort && <Button disabled={busy} onClick={() => void act((c) => approveUsdg(c, needUsdg, false))} sx={{ ...Bt, height: 34, px: 1.75 }}>Approve {fmtUsdg(needUsdg)} USDG</Button>}
         {stocksShort.length > 0 && <Button disabled={busy} onClick={() => void act((c) => approveHoldings(c, stocksShort.map((l) => l.token)))} sx={{ ...Bt, height: 34, px: 1.75 }}>Approve {stocksShort.map((l) => l.stock?.ticker ?? '?').join(', ')}</Button>}
         {open && <Button disabled={busy} onClick={() => void act((c) => setPaused(c, m.id, m.state !== 'paused'))} sx={{ ...Lt, backdropFilter: 'none', height: 34, px: 1.75, gap: 0.75 }}>{m.state !== 'paused' ? <><PauseIcon size={13} /> Pause</> : <><RefreshIcon size={13} /> Resume</>}</Button>}
         {open && rule.side !== 'sell' && (
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
             <InputBase value={extra} onChange={(e) => setExtra(e.target.value)} inputProps={{ 'aria-label': 'Top-up amount', inputMode: 'decimal' }} startAdornment={<span style={{ fontSize: 13, color: t.color.textMuted, marginRight: 4 }}>$</span>} sx={{ width: 90, height: 34, px: 1, borderRadius: t.radius.input, background: t.color.hover, fontSize: 13 }} />
-            <Button disabled={busy || extraRaw === 0n} onClick={() => void act(async (c) => { await topUp(c, m.id, extraRaw); await approveUsdg(c, budgetAllowance({ budget: m.budget + extraRaw, perTrade: m.perTrade, tip: m.tip })) })} sx={{ ...Lt, backdropFilter: 'none', height: 34, px: 1.75 }}>Top up</Button>
+            <Button disabled={busy || extraRaw === 0n} onClick={() => void act(async (c) => { const nextNeed = budgetAllowance({ budget: m.budget + extraRaw, perTrade: m.perTrade, tip: m.tip }); const delta = nextNeed > needUsdg ? nextNeed - needUsdg : 0n; const add = m.usdgAllowance + delta >= nextNeed; await topUp(c, m.id, extraRaw); await approveUsdg(c, add ? delta : nextNeed, add) })} sx={{ ...Lt, backdropFilter: 'none', height: 34, px: 1.75 }}>Top up</Button>
           </Box>
         )}
         {open && <Button disabled={busy} onClick={() => void act((c) => closeMandate(c, m.id))} sx={{ ...Lt, backdropFilter: 'none', height: 34, px: 1.75 }}>Close</Button>}

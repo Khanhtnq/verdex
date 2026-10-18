@@ -155,7 +155,9 @@ export function chainMeta(c: ChainX) {
 
 export async function waitForTx(chain: ChainX, hash: `0x${string}`) {
   const client = publicClientFor(chain)
-  await client.waitForTransactionReceipt({ hash, timeout: 120_000 }).catch(() => undefined)
+  const receipt = await client.waitForTransactionReceipt({ hash, timeout: 120_000 })
+  if (receipt.status !== 'success') throw new Error('The transaction reverted.')
+  return receipt
 }
 
 export function describeError(e: unknown) {

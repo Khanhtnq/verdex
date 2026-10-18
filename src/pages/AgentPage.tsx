@@ -333,7 +333,7 @@ export default function AgentPage() {
                   Save
                 </Button>
                 {config.key && (
-                  <Button onClick={() => { setDraft({ provider: 'demo', key: '', model: '' }) }} sx={{ ...Lt, height: 40, px: '16px', fontSize: 14, backdropFilter: 'none', background: 'transparent', color: t.color.textMuted }}>
+                  <Button onClick={() => { const empty: AgentConfig = { provider: 'demo', key: '', model: '' }; saveConfig(empty); setConfig(empty); setDraft(empty); session.current = null }} sx={{ ...Lt, height: 40, px: '16px', fontSize: 14, backdropFilter: 'none', background: 'transparent', color: t.color.textMuted }}>
                     Forget key
                   </Button>
                 )}

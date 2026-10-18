@@ -167,7 +167,7 @@ function Composer({ pairs, pair, side, setPair, setSide, wallet, chain, usdg, al
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: 44, px: 1.5, borderRadius: t.radius.input, background: t.color.hover }}>
         <Typography sx={{ fontSize: 15, color: t.color.textMuted }}>$</Typography>
         <InputBase value={margin} onChange={(e) => setMargin(e.target.value.replace(/[^0-9.]/g, ''))} inputProps={{ inputMode: 'decimal', 'aria-label': 'Margin' }} sx={{ flex: 1, fontSize: 15, fontWeight: 500 }} />
-        <Box component="button" type="button" onClick={() => setMargin(formatUnits(usdg, 6))} sx={{ all: 'unset', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: t.color.mark }}>Max</Box>
+        <Box component="button" type="button" onClick={() => setMargin(formatUnits(holder || feeBps === 0 ? usdg : (usdg * 10_000n) / BigInt(10_000 + Math.ceil(lev * feeBps)), 6))} sx={{ all: 'unset', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: t.color.mark }}>Max</Box>
       </Box>
       <Typography sx={{ fontSize: 12, color: short ? t.color.red : t.color.textMuted, mt: 0.75 }}>Wallet: {fmtUsdg(usdg)} USDG{plan && plan.fee > 0n ? ` · fee ${fmtUsdg(plan.fee)}` : holder ? ' · no fee for VERDEX holders' : ''}</Typography>
       <Label>Leverage</Label>

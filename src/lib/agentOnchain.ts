@@ -126,7 +126,7 @@ export async function readMandates(owner: Address, assets: Asset[]): Promise<Onc
     ]) })
     const legs: OnchainLeg[] = t[0].map((token, k) => ({ token, fee: t[1][k], stock: stocks.find((s) => lc(s.address) === lc(token)), balance: per[k * 3]?.status === 'success' ? (per[k * 3].result as bigint) : 0n, allowance: per[k * 3 + 1]?.status === 'success' ? (per[k * 3 + 1].result as bigint) : 0n, lastTradeAt: per[k * 3 + 2]?.status === 'success' ? Number(per[k * 3 + 2].result) : 0 }))
     const rule = ruleFor(m[1])
-    const state: OnchainMandate['state'] = m[6] ? 'closed' : m[5] ? 'paused' : m[7] !== 0 && now > m[7] ? 'expired' : rule?.side === 'buy' && m[8] < 1_000_000n ? 'spent' : 'active'
+    const state: OnchainMandate['state'] = m[6] ? 'closed' : m[5] ? 'paused' : m[7] !== 0 && now > m[7] ? 'expired' : (rule?.side === 'buy' || (rule?.side === 'both' && legs.every((l) => l.balance === 0n))) && m[8] < 1_000_000n ? 'spent' : 'active'
     out.push({ id: ids[i], owner: m[0], rule: m[1], param: m[2], maxSlippageBps: m[3], cooldown: m[4], paused: m[5], closed: m[6], expiresAt: m[7], budget: m[8], perTrade: m[9], perDay: m[10], tip: m[11], spentToday: m[13], spent: m[14], lastTrade: m[15], sold: m[16], trades: m[17], leftToday, legs, usdgAllowance, usdgBalance, state })
   }
   return out.reverse()
@@ -177,13 +177,14 @@ export async function createMandate(ctx: TxCtx, m: NewMandate) {
   return sendTx(ctx, CONTRACT, data)
 }
 // Approve USDG for exactly what the mandate may spend, on top of what other mandates already have.
-export async function approveUsdg(ctx: TxCtx, amount: bigint) {
+export async function approveUsdg(ctx: TxCtx, amount: bigint, additive = true) {
   await ensureChain(ctx)
   const c = client()
   const allowance = await c.readContract({ address: USDG.address, abi: erc20Abi, functionName: 'allowance', args: [ctx.account.address, CONTRACT] })
-  if (allowance >= amount) { ctx.onPhase('done'); return }
+  const target = additive ? allowance + amount : amount
+  if (allowance >= target) { ctx.onPhase('done'); return }
   ctx.onPhase('approving')
-  const hash = await ctx.walletClient.sendTransaction({ account: ctx.account.address, chain: null, to: USDG.address, data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [CONTRACT, amount] }) })
+  const hash = await ctx.walletClient.sendTransaction({ account: ctx.account.address, chain: null, to: USDG.address, data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [CONTRACT, target] }) })
   await waitForTx(ctx.chain ?? ({ id: ROBINHOOD } as never), hash)
   ctx.onPhase('done')
 }

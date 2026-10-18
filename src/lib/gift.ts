@@ -62,7 +62,8 @@ export async function createGift(ctx: TxCtx, token: Address, amount: bigint, lif
   const hash = await sendTx(ctx, GIFT_ADDRESS, encodeFunctionData({ abi, functionName: 'create', args: [token, amount, key, expiresAt] }))
   const r = await c.waitForTransactionReceipt({ hash, timeout: 180_000 })
   const id = (await c.readContract({ address: GIFT_ADDRESS, abi, functionName: 'sentBy', args: [ctx.account.address] })).slice(-1)[0]
-  return { hash, id, link: giftLink(id, pk), ok: r.status === 'success' }
+  if (r.status !== 'success' || id === undefined) throw new Error('The gift transaction reverted.')
+  return { hash, id, link: giftLink(id, pk), ok: true }
 }
 export async function signClaim(id: bigint, key: Hex, to: Address) {
   const digest = await client().readContract({ address: GIFT_ADDRESS, abi, functionName: 'claimDigest', args: [id, to] })
@@ -74,7 +75,8 @@ export async function claimByRelay(id: bigint, key: Hex, to: Address) {
   const r = await fetch('/api/gift/claim', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: id.toString(), to, signature }) })
   const j = await r.json().catch(() => ({ ok: false, error: `relay ${r.status}` }))
   if (!j.ok) throw new Error(j.error ?? 'relay failed')
-  await client().waitForTransactionReceipt({ hash: j.hash, timeout: 180_000 })
+  const receipt = await client().waitForTransactionReceipt({ hash: j.hash, timeout: 180_000 })
+  if (receipt.status !== 'success') throw new Error('The claim transaction reverted.')
   return j.hash as Hex
 }
 export async function claimFromWallet(ctx: TxCtx, id: bigint, key: Hex) {

@@ -161,7 +161,8 @@ async function approveExact(ctx: TxCtx, token: Address, amount: bigint, current:
   if (current >= amount) return
   ctx.onPhase('approving')
   const hash = await ctx.walletClient.writeContract({ address: token, abi: erc20Abi, functionName: 'approve', args: [LEND, amount], account: ctx.account.address, chain: null })
-  await client().waitForTransactionReceipt({ hash, timeout: 120_000 })
+  const receipt = await client().waitForTransactionReceipt({ hash, timeout: 120_000 })
+  if (receipt.status !== 'success') throw new Error('The approval transaction reverted.')
 }
 
 async function send(ctx: TxCtx, fn: 'supply' | 'withdraw' | 'addCollateral' | 'removeCollateral' | 'borrow' | 'repay' | 'skim', args: readonly unknown[]) {
@@ -209,6 +210,7 @@ export async function deployLend(ctx: TxCtx) {
   const hash = await ctx.walletClient.sendTransaction({ account: ctx.account.address, chain: null, data: encodeDeployData({ abi, bytecode: BYTECODE, args: [TREASURY] }) })
   ctx.onPhase('pending')
   const receipt = await client().waitForTransactionReceipt({ hash, timeout: 120_000 })
+  if (receipt.status !== 'success' || !receipt.contractAddress) throw new Error('The deploy transaction reverted.')
   ctx.onPhase('done')
   return { hash, address: receipt.contractAddress as Address }
 }

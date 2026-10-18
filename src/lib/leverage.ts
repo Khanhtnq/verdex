@@ -119,9 +119,10 @@ export function planLong(p: Pair, margin: bigint, leverage: number, feeBps: numb
 }
 export function planShort(p: Pair, margin: bigint, leverage: number, feeBps: number, holder: boolean): Plan {
   const s = p.short
+  const spotPrice = s?.pool?.priceUsd && s.pool.priceUsd > 0 ? s.pool.priceUsd : p.price
   const lev = Math.min(Math.max(leverage, 1.01), MAX_SHORT)
   const exposure = (margin * BigInt(Math.round(lev * 10_000))) / 10_000n
-  const units = s && p.price > 0 ? parseUnits((Number(formatUnits(exposure, 6)) / p.price).toFixed(p.stock.decimals), p.stock.decimals) : 0n
+  const units = s && spotPrice > 0 ? parseUnits((Number(formatUnits(exposure, 6)) / spotPrice).toFixed(p.stock.decimals), p.stock.decimals) : 0n
   const proceeds = s ? (exposure * BigInt(Math.round((1 - poolFee(s)) * 10_000))) / 10_000n : 0n
   const minProceeds = (proceeds * BigInt(10_000 - SLIPPAGE_BPS)) / 10_000n
   const fee = holder ? 0n : (proceeds * BigInt(feeBps)) / 10_000n
@@ -153,7 +154,8 @@ async function approveExact(ctx: TxCtx, amount: bigint, current: bigint) {
   if (current >= amount) return
   ctx.onPhase('approving')
   const hash = await ctx.walletClient.writeContract({ address: USDG.address, abi: erc20Abi, functionName: 'approve', args: [LEVERAGE, amount], account: ctx.account.address, chain: null })
-  await client().waitForTransactionReceipt({ hash, timeout: 120_000 })
+  const receipt = await client().waitForTransactionReceipt({ hash, timeout: 120_000 })
+  if (receipt.status !== 'success') throw new Error('The approval transaction reverted.')
 }
 async function send(ctx: TxCtx, fn: 'openLong' | 'closeLong' | 'openShort' | 'closeShort' | 'addMargin' | 'settle', args: readonly unknown[]) {
   ctx.onPhase('confirming')
@@ -174,7 +176,8 @@ export async function closeLong(ctx: TxCtx, p: Pair, minOut: bigint) {
 }
 export async function openShort(ctx: TxCtx, p: Pair, plan: Plan, allowance: bigint) {
   if (!p.short) throw new Error('No short market for this stock yet.')
-  await ensureChain(ctx); await approveExact(ctx, plan.margin + plan.fee, allowance)
+  const feeCover = plan.fee > 0n ? plan.fee + (plan.fee * BigInt(SLIPPAGE_BPS)) / 10_000n + 1n : 0n
+  await ensureChain(ctx); await approveExact(ctx, plan.margin + feeCover, allowance)
   return send(ctx, 'openShort', [p.short.id, plan.margin, plan.units, plan.minProceeds])
 }
 export async function closeShort(ctx: TxCtx, p: Pair, minOut: bigint) {
