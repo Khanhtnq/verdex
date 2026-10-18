@@ -27,10 +27,21 @@ const subs = new Map() // endpoint -> { sub, addrs: string[] }
 try { for (const s of JSON.parse(readFileSync(FILE, 'utf8'))) subs.set(s.sub.endpoint, s) } catch { /* none yet */ }
 const save = () => { try { writeFileSync(FILE, JSON.stringify([...subs.values()])) } catch { /* best effort */ } }
 const MAX_SUBS = 20_000
+const PUSH_HOST_ALLOWLIST = /(^|\.)((fcm|android)\.googleapis\.com|google\.com|push\.services\.mozilla\.com|notify\.windows\.com|push\.apple\.com)$/i
+export function isValidPushEndpoint(endpoint) {
+  if (typeof endpoint !== 'string' || endpoint.length > 2048) return false
+  try {
+    const u = new URL(endpoint)
+    if (u.protocol !== 'https:' || u.username || u.password || (u.port && u.port !== '443')) return false
+    return PUSH_HOST_ALLOWLIST.test(u.hostname)
+  } catch {
+    return false
+  }
+}
 export function subscribe(body) {
   const sub = body?.subscription
   const addrs = (Array.isArray(body?.addresses) ? body.addresses : []).filter((a) => /^0x[0-9a-fA-F]{40}$/.test(a)).slice(0, 5).map((a) => a.toLowerCase())
-  if (!sub || typeof sub.endpoint !== 'string' || !/^https:\/\//.test(sub.endpoint) || !sub.keys?.p256dh || !sub.keys?.auth) return { ok: false, error: 'bad subscription' }
+  if (!sub || !isValidPushEndpoint(sub.endpoint) || !sub.keys?.p256dh || !sub.keys?.auth) return { ok: false, error: 'bad subscription' }
   if (!subs.has(sub.endpoint) && subs.size >= MAX_SUBS) return { ok: false, error: 'full' }
   subs.set(sub.endpoint, { sub: { endpoint: sub.endpoint, keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) } }, addrs })
   save()

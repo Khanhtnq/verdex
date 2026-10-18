@@ -82,9 +82,10 @@ export default function TermPage() {
   const capOf = (o: Offer) => (o.isRequest ? maxPrincipal(o.left, o.collPerLoan) : o.left)
   const doTake = async (o: Offer) => {
     const k = o.id.toString()
-    const p = parseUnits(Number(takeAmt[k] || formatUnits(capOf(o), 6)).toFixed(6), 6)
+    const cap = capOf(o)
+    const p = takeAmt[k] ? parseUnits(Number(takeAmt[k]).toFixed(6), 6) : cap
     const set = (ph: Phase, error?: string) => setTakeTx((m) => ({ ...m, [k]: { phase: ph, error } }))
-    try { await take(ctx((ph) => set(ph)), o, p > capOf(o) ? capOf(o) : p); set('done'); refresh() } catch (e) { set('failed', describeError(e)) }
+    try { await take(ctx((ph) => set(ph)), o, p > cap ? cap : p); set('done'); refresh() } catch (e) { set('failed', describeError(e)) }
   }
   const act = async (f: () => Promise<unknown>) => { try { await f(); refresh() } catch { /* the wallet shows it */ } }
 

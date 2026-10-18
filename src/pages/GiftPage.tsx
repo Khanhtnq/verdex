@@ -9,7 +9,7 @@ import { useAssets, useChains } from '../lib/api'
 import { describeError, type ChainX } from '../lib/lifi'
 import { PHASE_LABEL, USDG, stockTokens, usePools, type Phase } from '../lib/pools'
 import { poolFor } from '../lib/autopilot'
-import { EXPIRIES, GIFT_ADDRESS, createGift, takeBack, useSent, type Gift } from '../lib/gift'
+import { EXPIRIES, GIFT_ADDRESS, createGift, savedGiftLink, takeBack, useSent, type Gift } from '../lib/gift'
 import { resolveImg, TOKEN_LOGOS } from '../lib/img'
 import { useWallet } from '../components/wallet/WalletProvider'
 import { EarlyGate } from '../components/EarlyGate'
@@ -84,17 +84,18 @@ export default function GiftPage() {
                 <Box sx={{ display: 'flex', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
                   <Button onClick={() => { void navigator.clipboard.writeText(link); setCopied(true) }} sx={{ ...Bt, height: 36, px: 2 }}>{copied ? 'Copied' : 'Copy link'}</Button>
                 </Box>
-                <Typography sx={{ fontSize: 12, color: t.color.textLabel, mt: 1.5 }}>Whoever has this link can claim the gift. Send it privately, not in a public post. It is shown once: copy it now.</Typography>
+                <Typography sx={{ fontSize: 12, color: t.color.textLabel, mt: 1.5 }}>Whoever has this link can claim the gift. Send it privately, not in a public post. It is saved in this browser so you can copy it again below.</Typography>
               </Box>
             )}
           </Panel>
           <Panel sx={{ p: { xs: 2.5, md: 3 } }}>
             <Typography sx={{ fontSize: 16, fontWeight: 500 }}>Gifts you sent</Typography>
             <Box sx={{ display: 'grid', gap: 0.75, mt: 2 }}>
-              {(sent.data ?? []).map((g) => { const o = tickerOf(g.token); return (
+              {(sent.data ?? []).map((g) => { const o = tickerOf(g.token); const saved = g.state === 0 ? savedGiftLink(g) : undefined; return (
                 <Box key={g.id.toString()} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.25, borderRadius: t.radius.input, background: t.color.raised, flexWrap: 'wrap' }}>
                   <Typography sx={{ fontSize: 13, fontWeight: 500, minWidth: 120 }}>{o ? `${Number(formatUnits(g.amount, o.decimals)).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${o.ticker}` : `#${g.id}`}</Typography>
                   <Typography sx={{ fontSize: 12, color: t.color.textMuted, flex: 1 }}>{STATE[g.state]}{g.state === 0 ? ` · back to you from ${when(g.expiresAt)}` : ''}</Typography>
+                  {saved && <Button onClick={() => void navigator.clipboard.writeText(saved)} sx={{ ...Lt, backdropFilter: 'none', height: 30, px: 1.5 }}>Copy link</Button>}
                   {g.state === 0 && now >= g.expiresAt && <Button onClick={() => void back(g)} sx={{ ...Lt, backdropFilter: 'none', height: 30, px: 1.5 }}>Take it back</Button>}
                 </Box>) })}
               {wallet.account && sent.data && sent.data.length === 0 && <Typography sx={{ fontSize: 13, color: t.color.textMuted }}>None yet.</Typography>}

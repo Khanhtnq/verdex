@@ -43,7 +43,14 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/api/gift/claim') {
     let raw = ''
     req.on('data', (d) => { raw += d; if (raw.length > 4096) req.destroy() })
-    req.on('end', () => { let body; try { body = JSON.parse(raw) } catch { body = null } const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',')[0].trim(); relayClaim(key, ip, body).then((r) => { res.writeHead(r.status, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }); res.end(JSON.stringify(r.body)) }) })
+    req.on('end', () => {
+      let body; try { body = JSON.parse(raw) } catch { body = null }
+      const xff = String(req.headers['x-forwarded-for'] ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+      const ip = xff.length > 0 ? xff[xff.length - 1] : String(req.socket.remoteAddress ?? '').trim()
+      relayClaim(key, ip, body)
+        .then((r) => { res.writeHead(r.status, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }); res.end(JSON.stringify(r.body)) })
+        .catch(() => { res.writeHead(500, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }); res.end('{"ok":false,"error":"relay failed"}') })
+    })
     return
   }
   const PUSH = { '/api/push/subscribe': pushSubscribe, '/api/push/unsubscribe': pushUnsubscribe, '/api/push/test': pushTest }

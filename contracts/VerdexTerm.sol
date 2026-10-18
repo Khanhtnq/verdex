@@ -111,7 +111,7 @@ contract VerdexTerm {
     function lend(uint256 id, uint256 principal) external nonReentrant returns (uint256 loanId) {
         Offer storage o = _open(id, true);
         uint256 coll = _collFor(principal, o.collPerLoan);
-        if (principal == 0 || coll > o.left || (principal < o.minLoan && coll != o.left)) revert BadArgs();
+        if (principal == 0 || coll > o.left || (principal < o.minLoan && (o.left - coll) * 1e18 >= o.collPerLoan)) revert BadArgs();
         o.left -= coll;
         _pull(loanToken, msg.sender, o.maker, principal);
         loanId = _start(id, o, msg.sender, o.maker, principal, coll);
@@ -189,7 +189,7 @@ contract VerdexTerm {
 
     function _collFor(uint256 principal, uint256 collPerLoan) private pure returns (uint256) { return _mulDivUp(principal, collPerLoan, 1e18); }
 
-    function _mulDivUp(uint256 a, uint256 b, uint256 d) private pure returns (uint256) { return a == 0 ? 0 : (a * b - 1) / d + 1; }
+    function _mulDivUp(uint256 a, uint256 b, uint256 d) private pure returns (uint256) { return (a == 0 || b == 0) ? 0 : (a * b - 1) / d + 1; }
 
     /// Pulls into this contract and returns what actually arrived (fee-on-transfer tokens lock what they deliver).
     function _pullIn(IERC20 t, address from, uint256 amount) private returns (uint256) {

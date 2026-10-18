@@ -9,7 +9,7 @@ import { Bt, Lt } from '../theme/styles'
 import { useAssets, useChains } from '../lib/api'
 import { describeError, type ChainX } from '../lib/lifi'
 import { USDG, stockTokens } from '../lib/pools'
-import { claimByRelay, claimFromWallet, parseLink, useGift } from '../lib/gift'
+import { claimByRelay, claimFromWallet, keyMatchesGift, parseLink, useGift } from '../lib/gift'
 import { resolveImg, TOKEN_LOGOS } from '../lib/img'
 import { useWallet } from '../components/wallet/WalletProvider'
 import { Page, Panel } from './common'
@@ -31,7 +31,7 @@ export default function GiftClaimPage() {
   }, [gift.data, assets.data])
   const [state, setState] = useState<{ phase: 'idle' | 'busy' | 'done' | 'failed'; error?: string; relayFailed?: boolean }>({ phase: 'idle' })
   const g = gift.data
-  const keyMatches = g && link ? g.key !== '0x0000000000000000000000000000000000000000' : false
+  const keyMatches = g && link ? keyMatchesGift(link.key, g.key) : false
   const claim = async (own: boolean) => {
     if (!link || !wallet.account) return
     setState({ phase: 'busy' })
@@ -52,6 +52,7 @@ export default function GiftClaimPage() {
             <Typography sx={{ fontSize: 14, color: t.color.textMuted, mt: 1 }}>{tok.name} on Robinhood Chain, from {short(g.sender)}</Typography>
             {g.state === 1 && <Typography sx={{ fontSize: 16, mt: 3, color: t.color.mark }}>Claimed by {wallet.account && g.claimedBy.toLowerCase() === wallet.account.address.toLowerCase() ? 'you' : short(g.claimedBy)}. It is in that wallet now.</Typography>}
             {g.state === 2 && <Typography sx={{ fontSize: 16, mt: 3, color: t.color.textMuted }}>The sender took this gift back after it expired.</Typography>}
+            {g.state === 0 && !keyMatches && <Typography sx={{ fontSize: 15, mt: 3, color: t.color.red }}>This link key does not match this gift. Ask the sender for the complete link.</Typography>}
             {g.state === 0 && keyMatches && (
               <Box sx={{ mt: 3.5 }}>
                 {!wallet.account ? <Button onClick={wallet.openWalletMenu} sx={{ ...Bt, height: 50, px: 4 }}>Connect a wallet to claim</Button> : (

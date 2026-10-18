@@ -287,6 +287,7 @@ contract VerdexLend {
         seized = unitValue == 0 ? coll : repaid * (BPS + m.liqBonusBps) / BPS * 1e18 / unitValue;
         if (seized > coll) seized = coll;
         uint256 shares = repaid == debt ? owed : repaid * m.totalBorrowShares / m.totalBorrowAssets;
+        if (shares == 0) revert ZeroShares();
         borrowShares[id][borrower] = owed - shares;
         m.totalBorrowShares -= shares;
         m.totalBorrowAssets = repaid >= m.totalBorrowAssets ? 0 : m.totalBorrowAssets - repaid;

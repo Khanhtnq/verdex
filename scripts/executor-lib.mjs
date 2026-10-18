@@ -201,9 +201,9 @@ export async function runAgentOnce({ rpc = DEFAULT_RPC, address, key, log = cons
   ids.forEach((id, k) => {
     if (raw[k].status !== 'success') return
     const m = raw[k].result
-    const [owner, rule, param, , , paused, closed, expiresAt, budget, perTrade, perDay, , , , , , ,] = m
+    const [owner, rule, param, , , paused, closed, expiresAt, budget, perTrade, perDay, tip, , , , , ,] = m
     if (closed || paused || (Number(expiresAt) !== 0 && now > Number(expiresAt))) return
-    open.push({ id, owner, rule: Number(rule), param: Number(param), budget, perTrade, perDay, ...decodeRule(Number(rule)) })
+    open.push({ id, owner, rule: Number(rule), param: Number(param), budget, perTrade, perDay, tip, ...decodeRule(Number(rule)) })
   })
   out.open = open.length
   if (!open.length) return out
@@ -236,7 +236,15 @@ export async function runAgentOnce({ rpc = DEFAULT_RPC, address, key, log = cons
         }
         let amount
         if (!sell) {
-          amount = [m.perTrade, m.budget, left].reduce((a, b) => (a < b ? a : b))
+          const [bal, allowance] = await Promise.all([
+            pub.readContract({ address: USDG, abi: erc20Abi, functionName: 'balanceOf', args: [m.owner] }),
+            pub.readContract({ address: USDG, abi: erc20Abi, functionName: 'allowance', args: [m.owner, address] }),
+          ])
+          const avail = bal < allowance ? bal : allowance
+          const tip = m.tip ?? 0n
+          const spendable = avail > tip ? avail - tip : 0n
+          amount = [m.perTrade, m.budget, left, spendable].reduce((a, b) => (a < b ? a : b))
+          if (amount < 1_000_000n) { out.skipped++; log(`mandate ${m.id}: ${AGENT_RULES[m.base]}, ${m.tokens[i].slice(0, 8)} moved ${move}%: USDG balance or allowance short`); continue }
         } else {
           const [bal, allowance] = await Promise.all([
             pub.readContract({ address: m.tokens[i], abi: erc20Abi, functionName: 'balanceOf', args: [m.owner] }),
